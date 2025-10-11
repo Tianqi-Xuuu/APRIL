@@ -6,11 +6,14 @@
 
 在 on-policy 的 RLHF/GR?O 训练中，系统只有在每一“轮”（round）收集到 **N** 个 rollout 样本后才进入更新阶段。由于生成样本长度不一致，系统必须等待少数**长尾样本**完成，才能开始训练阶段。这会导致在 rollout 后段 GPU 利用率下降、吞吐量变低。
 
+![Rollout length distribution indicates long-tail phenonema.](./imgs/distribution_of_three_dataset.png)
+![Bubble in RL training.](./imgs/bubble.png)
+
 ### 我们的做法：Active Partial Rollout（APRIL）
 
 **核心思想**：在每一轮中，我们进行**过采样**（N' > N），一旦达到 **N** 个已完成样本的目标，就**主动中断**其余进行中的请求。**未完成的响应**会被存入**缓冲区（buffer）**，并在下一轮中被**优先续生成**，从而缓解长尾请求带来的效率下降。
 
-![调度](./imgs/partial_scheduling.png)
+![Scheduling](./imgs/method.png)
 
 ### 亮点
 

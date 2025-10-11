@@ -25,6 +25,9 @@
 
 In on-policy RL training (RLHF/GRPO/DAPO), the rollout phase dominates runtime, typically accounting for **over 90%** of total training time. Due to the highly variable response lengths across samples, synchronous training paradigms suffer from severe GPU underutilization as faster-generating workers sit idle waiting for the longest-running instances to complete.
 
+![Rollout length distribution indicates long-tail phenonema.](./imgs/distribution_of_three_dataset.png)
+![Bubble in RL training.](./imgs/bubble.png)
+
 ### Our Solution: Active Partial Rollouts
 
 APRIL revolutionizes rollout efficiency through an innovative mechanism:
@@ -34,7 +37,7 @@ APRIL revolutionizes rollout efficiency through an innovative mechanism:
 3. **Intelligent recycling**: Store partial results in a buffer and resume generation in the next iteration
 4. **Seamless integration**: Works with existing RL frameworks without modifying inference kernels
 
-![scheduling](./imgs/partial_scheduling.png)
+![Scheduling](./imgs/method.png)
 
 ## ✨ Key Features
 
