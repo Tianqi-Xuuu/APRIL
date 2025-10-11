@@ -136,57 +136,6 @@ APRIL not only improves training efficiency but also achieves:
 
 ## 🏗️ Architecture
 
-### System Design
-
-```mermaid
-graph TB
-    subgraph Pipeline["🎯 APRIL Training Pipeline"]
-        subgraph Rollout["📊 Rollout Phase"]
-            R1[("🎲 Over-provision<br/>N' > N requests")]
-            R2[("⚡ SGLang<br/>Inference Engine")]
-            R3[("🛑 Active<br/>Interruption")]
-            R1 --> R2
-            R2 --> R3
-        end
-
-        subgraph Buffer["💾 Buffer Management"]
-            B1[("📦 Partial<br/>Rollouts")]
-            B2[("♻️ Resume<br/>Queue")]
-            B3[("✅ Complete<br/>Samples")]
-            B1 --> B2
-            R3 --> B1
-            R3 --> B3
-        end
-
-        subgraph Training["🧠 Training Phase"]
-            T1[("🔄 Policy<br/>Update")]
-            T2[("📈 Loss<br/>Computation")]
-            T3[("⚙️ Megatron/<br/>FSDP Backend")]
-            B3 --> T2
-            T2 --> T1
-            T1 --> T3
-        end
-
-        B2 -.->|Next Iteration| R1
-        T3 -.->|Updated Model| R2
-    end
-
-    style Pipeline fill:#f9f9ff,stroke:#4a5568,stroke-width:2px
-    style Rollout fill:#e6f7ff,stroke:#1890ff,stroke-width:1px
-    style Buffer fill:#fff7e6,stroke:#fa8c16,stroke-width:1px
-    style Training fill:#f0f5ff,stroke:#597ef7,stroke-width:1px
-
-    style R1 fill:#e6f7ff,stroke:#40a9ff
-    style R2 fill:#e6f7ff,stroke:#40a9ff
-    style R3 fill:#e6f7ff,stroke:#40a9ff
-    style B1 fill:#fff7e6,stroke:#ffa940
-    style B2 fill:#fff7e6,stroke:#ffa940
-    style B3 fill:#fff7e6,stroke:#ffa940
-    style T1 fill:#f0f5ff,stroke:#85a5ff
-    style T2 fill:#f0f5ff,stroke:#85a5ff
-    style T3 fill:#f0f5ff,stroke:#85a5ff
-```
-
 ### Core Components
 
 | Component | Path | Description |
