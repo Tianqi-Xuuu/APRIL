@@ -48,15 +48,33 @@ APRIL revolutionizes rollout efficiency through an innovative mechanism:
 
 ### Quick Start with Docker
 
-#### For AMD GPUs:
+- AMD Docker Image
+```
+$DOCKER_IMG=rlsys/april:AMD_exp_docker_image
+```
+More detail, please refer to [AMD Dockerfile]().
+
+- NV Docker Image
+```
+$DOCKER_IMG=rlsys/april:NV_exp_docker_image
+```
+More detail, please refer to [NVIDIA Dockerfile]().
+
+#### Launch Docker Image:
 ```bash
-docker run --rm --gpus all --ipc=host --shm-size=16g \
-  --ulimit memlock=-1 --ulimit stack=67108864 \
-  -it rlsys/slime:slime_ubuntu22.04_rocm6.3.4-patch-numa-patch_sglang0.4.9_megatron-patch_ray2.47.1_apex_torch-memory-saver0.0.8-patch-vim /bin/bash
+docker run --rm \
+    --gpus all \
+    --ipc=host \
+    --shm-size=16g \
+    --ulimit memlock=-1 \
+    --ulimit stack=67108864 \
+    -it $DOCKER_IMG \
+    /bin/bash
 ```
 
-#### For NVIDIA GPUs:
-See [NVIDIA setup guide](./docs/en/build.md)
+<!--
+rlsys/slime:slime_ubuntu22.04_rocm6.3.4-patch-numa-patch_sglang0.4.9_megatron-patch_ray2.47.1_apex_torch-memory-saver0.0.8-patch-vim 
+-->
 
 ### Install APRIL
 
@@ -198,7 +216,7 @@ Yes! APRIL operates at the **system scheduling layer** and is fully compatible w
 
 APRIL is hardware-agnostic and tested on:
 - **NVIDIA GPUs**: H100
-- **AMD GPUs**: MI300X
+- **AMD GPUs**: MI300X/MI325
 
 ## 📁 Repository Structure
 
@@ -251,11 +269,14 @@ APRIL is designed as a drop-in enhancement for existing RL training pipelines:
 If you use APRIL in your research, please cite our paper:
 
 ```bibtex
-@article{april2025,
-  title={APRIL: Active Partial Rollouts in Reinforcement Learning to Tame Long-tail Generation},
-  author={RLsys Foundation Team},
-  journal={arXiv preprint},
-  year={2025}
+@misc{zhou2025aprilactivepartialrollouts,
+      title={APRIL: Active Partial Rollouts in Reinforcement Learning to Tame Long-tail Generation},
+      author={Yuzhen Zhou and Jiajun Li and Yusheng Su and Gowtham Ramesh and Zilin Zhu and Xiang Long and Chenyang Zhao and Jin Pan and Xiaodong Yu and Ze Wang and Kangrui Du and Jialian Wu and Ximeng Sun and Jiang Liu and Qiaolin Yu and Hao Chen and Zicheng Liu and Emad Barsoum},
+      year={2025},
+      eprint={2509.18521},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2509.18521},
 }
 ```
 
