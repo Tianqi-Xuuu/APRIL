@@ -176,6 +176,8 @@ cython_debug/
 wandb/
 outputs/
 local/
+runs/
+tmp/
 **/rollout_data/
 **/buffer_stats/
 *.out

@@ -1,4 +1,6 @@
+import json
 import math
+import os
 
 import numpy as np
 import ray
@@ -169,6 +171,8 @@ def log_rollout_data(rollout_id, args, rollout_data):
                 or key == "completion_tokens_stats"
                 or key == "partial_samples"
                 or key == "total_off_policy_tokens"
+                or key == "sample_indices"
+                or key == "sample_metadata"
             ):
                 continue
             # Upload per sample mean for each rollout value
@@ -220,6 +224,7 @@ def log_rollout_data(rollout_id, args, rollout_data):
                 dst=mpu.get_data_parallel_src_rank(with_context_parallel=True),
                 group=mpu.get_data_parallel_group_gloo(with_context_parallel=True),
             )
+    _write_rollout_sample_records(rollout_id, args, rollout_data)
     log_partial_rollout_data(rollout_id, args, rollout_data)
     if args.log_multi_turn:
         log_multi_turn_data(rollout_id, args, rollout_data)
@@ -297,6 +302,89 @@ def log_partial_rollout_data(rollout_id, args, rollout_data):
                 dst=mpu.get_data_parallel_src_rank(with_context_parallel=True),
                 group=mpu.get_data_parallel_group(with_context_parallel=True),
             )
+
+
+def _write_rollout_sample_records(rollout_id, args, rollout_data):
+    sample_metadata = rollout_data.get("sample_metadata")
+    sample_indices = rollout_data.get("sample_indices")
+    prompts = rollout_data.get("prompts")
+    responses = rollout_data.get("responses")
+    if (
+        sample_metadata is None
+        or sample_indices is None
+        or prompts is None
+        or responses is None
+        or mpu.get_tensor_model_parallel_rank() != 0
+        or not mpu.is_pipeline_last_stage()
+    ):
+        return
+
+    local_records = []
+    rewards = rollout_data.get("rewards", [])
+    raw_rewards = rollout_data.get("raw_reward", rewards)
+    response_lengths = rollout_data.get("response_lengths", [])
+    total_lengths = rollout_data.get("total_lengths", [])
+    truncated = rollout_data.get("truncated", [])
+    excluded_metadata_keys = {
+        "rollout_time",
+        "initial_rollout_started_at",
+        "final_rollout_finished_at",
+        "final_update_started_at",
+        "final_update_finished_at",
+    }
+
+    for idx, metadata, prompt, response, reward, raw_reward, response_length, total_length, is_truncated in zip(
+        sample_indices,
+        sample_metadata,
+        prompts,
+        responses,
+        rewards,
+        raw_rewards,
+        response_lengths,
+        total_lengths,
+        truncated,
+    ):
+        record = {
+            "sample_index": idx,
+            "rollout_id": rollout_id,
+            "prompt": prompt,
+            "response": response,
+            "reward": reward,
+            "raw_reward": raw_reward,
+            "response_length": response_length,
+            "total_length": total_length,
+            "truncated": bool(is_truncated),
+        }
+        if metadata:
+            for key, value in metadata.items():
+                if key in excluded_metadata_keys:
+                    continue
+                record[key] = value
+        local_records.append(record)
+
+    if mpu.get_data_parallel_rank(with_context_parallel=True) == 0:
+        gathered_records = [None] * mpu.get_data_parallel_world_size(with_context_parallel=True)
+        dist.gather_object(
+            local_records,
+            gathered_records,
+            dst=mpu.get_data_parallel_src_rank(with_context_parallel=True),
+            group=mpu.get_data_parallel_group_gloo(with_context_parallel=True),
+        )
+        if args.save:
+            output_dir = os.path.join(args.save, "analysis", "sample_records")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, f"rollout_{rollout_id:06d}.jsonl")
+            with open(output_path, "w", encoding="utf-8") as f:
+                for records in gathered_records:
+                    for record in records:
+                        f.write(json.dumps(record, ensure_ascii=True) + "\n")
+    else:
+        dist.gather_object(
+            local_records,
+            None,
+            dst=mpu.get_data_parallel_src_rank(with_context_parallel=True),
+            group=mpu.get_data_parallel_group_gloo(with_context_parallel=True),
+        )
 
 
 def log_multi_turn_data(rollout_id, args, rollout_data):

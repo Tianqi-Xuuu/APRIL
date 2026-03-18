@@ -1,7 +1,6 @@
 import asyncio
 import copy
 
-import time
 import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -202,6 +201,7 @@ async def abort(args, rollout_id: int, data_buffer):
                     state.partial_samples_count += 1
                     if "start_rollout_id" not in sample.metadata:
                         sample.metadata["start_rollout_id"] = rollout_id
+                    sample.metadata["last_partial_rollout_id"] = rollout_id
             data_buffer.add_samples(group)
 
     if args.partial_rollout:
@@ -295,6 +295,14 @@ async def generate_rollout_async(args, rollout_id: int, data_buffer) -> list[lis
         }
 
     if len(data) > 0:
+        for group in data:
+            for sample in group:
+                if "start_rollout_id" not in sample.metadata:
+                    sample.metadata["start_rollout_id"] = rollout_id
+                sample.metadata["final_rollout_id"] = rollout_id
+                sample.metadata["response_length"] = sample.response_length
+                sample.metadata["completion_tokens"] = sample.completion_tokens
+
         data[0][0].metadata.update(
             {
                 "rollout_time": rollout_time,

@@ -207,6 +207,10 @@ class Buffer:
         """
         Convert inference generated samples to training data.
         """
+        rollout_time = None
+        completion_tokens_stats = {}
+        partial_samples = None
+        total_off_policy_tokens = None
         if samples[0].metadata and "rollout_time" in samples[0].metadata:
             rollout_time = samples[0].metadata["rollout_time"]
         if samples[0].metadata and "completion_tokens_stats" in samples[0].metadata:
@@ -219,6 +223,10 @@ class Buffer:
         train_data = {
             "tokens": [sample.tokens for sample in samples],
             "response_lengths": [sample.response_length for sample in samples],
+            "sample_indices": [sample.index for sample in samples],
+            "sample_metadata": [copy.deepcopy(sample.metadata) for sample in samples],
+            "prompts": [sample.prompt for sample in samples],
+            "responses": [sample.response for sample in samples],
             # some reward model, e.g. remote rm, may return multiple rewards,
             # we could use key to select the reward.
             "rewards": [

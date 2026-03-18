@@ -229,6 +229,7 @@ def compute_advantages_and_returns(args, rollout_data):
 def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     advantages = torch.cat(batch["advantages"], dim=0)
     old_log_probs = batch["log_probs"]
+    sample_metadata = batch.get("sample_metadata")
 
     response_lengths = batch["response_lengths"]
     total_lengths = batch["total_lengths"]
@@ -243,6 +244,10 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     )
 
     log_probs = log_probs_and_entropy["log_probs"]
+    sample_policy_shift_kl = [
+        (old_logprob - log_prob).float().mean().item()
+        for log_prob, old_logprob in zip(log_probs, old_log_probs)
+    ]
     if args.advantage_estimator == "gspo":
         full_log_probs = [
             all_gather_with_cp(log_prob, total_length, response_length)
@@ -280,6 +285,28 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
 
     if args.use_kl_loss:
         ref_log_probs = batch["ref_log_probs"]
+        sample_update_ref_kl = [
+            compute_approx_kl(
+                log_prob,
+                ref_log_prob,
+                kl_loss_type=args.kl_loss_type,
+            )
+            .float()
+            .mean()
+            .item()
+            for log_prob, ref_log_prob in zip(log_probs_and_entropy["log_probs"], ref_log_probs)
+        ]
+        sample_rollout_ref_kl = [
+            compute_approx_kl(
+                old_log_prob,
+                ref_log_prob,
+                kl_loss_type=args.kl_loss_type,
+            )
+            .float()
+            .mean()
+            .item()
+            for old_log_prob, ref_log_prob in zip(old_log_probs, ref_log_probs)
+        ]
         ref_log_probs = torch.cat(ref_log_probs, dim=0)
         kl = compute_approx_kl(
             log_probs,
@@ -291,6 +318,21 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         loss = loss + args.kl_loss_coef * kl_loss
     else:
         kl_loss = torch.tensor(0.0, device=log_probs.device)
+        sample_update_ref_kl = [None] * len(sample_policy_shift_kl)
+        sample_rollout_ref_kl = [None] * len(sample_policy_shift_kl)
+
+    if sample_metadata is not None:
+        for metadata, policy_shift_kl, rollout_ref_kl, update_ref_kl in zip(
+            sample_metadata,
+            sample_policy_shift_kl,
+            sample_rollout_ref_kl,
+            sample_update_ref_kl,
+        ):
+            metadata["policy_shift_kl"] = policy_shift_kl
+            if rollout_ref_kl is not None:
+                metadata["rollout_ref_kl"] = rollout_ref_kl
+            if update_ref_kl is not None:
+                metadata["update_ref_kl"] = update_ref_kl
 
     # make sure the gradient could backprop correctly.
     if log_probs.numel() == 0:

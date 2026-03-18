@@ -146,6 +146,10 @@ def process_rollout_data(rollout_id, args, data_buffer, dp_rank, dp_size, rollou
         "truncated",
         "loss_masks",
         "round_number",
+        "sample_indices",
+        "sample_metadata",
+        "prompts",
+        "responses",
     ]:
         if key not in data:
             continue

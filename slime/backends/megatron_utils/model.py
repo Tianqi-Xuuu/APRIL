@@ -255,6 +255,7 @@ def forward_only(args, model, data_iterator, num_microbatches, store_prefix="", 
 def train_one_step(args, rollout_id, step_id, data_iterator, model, optimizer, opt_param_scheduler, num_microbatches):
     """Single training step."""
     args = get_args()
+    num_steps_per_rollout = args.rollout_batch_size * args.n_samples_per_prompt // args.global_batch_size
 
     # Set grad to zero.
     for model_chunk in model:
@@ -288,8 +289,23 @@ def train_one_step(args, rollout_id, step_id, data_iterator, model, optimizer, o
                 "ref_log_probs",
                 "values",
                 "advantages",
+                "sample_indices",
+                "sample_metadata",
             ],
         )
+
+        if batch["sample_metadata"] is not None:
+            for metadata in batch["sample_metadata"]:
+                metadata["update_rollout_id"] = rollout_id
+                metadata["update_step_id"] = step_id
+                metadata["update_global_step"] = rollout_id * num_steps_per_rollout + step_id
+                start_rollout_id = metadata.get("start_rollout_id", rollout_id)
+                metadata["start_policy_rollout_id"] = start_rollout_id
+                metadata["start_policy_global_step"] = start_rollout_id * num_steps_per_rollout
+                metadata["policy_staleness_rollouts"] = rollout_id - start_rollout_id
+                metadata["policy_staleness_steps"] = (
+                    metadata["update_global_step"] - metadata["start_policy_global_step"]
+                )
 
         output_tensor = model(
             input_ids=batch["tokens"],

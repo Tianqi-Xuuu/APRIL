@@ -250,6 +250,8 @@ class MegatronTrainRayActor(TrainRayActor):
                     train_data_iterator,
                     train_num_microbatches,
                 )
+            for metadata in rollout_data.get("sample_metadata", []):
+                metadata["final_update_rollout_id"] = rollout_id
 
         log_perf_data(rollout_id, self.args)
         Timer().start("train_wait")
