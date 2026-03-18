@@ -8,10 +8,10 @@ import ray
 import torch
 from transformers import AutoTokenizer
 
-import wandb
 from slime.utils.data import Dataset
 from slime.utils.misc import load_function
 from slime.utils.types import Sample
+from slime.utils.wandb_utils import require_wandb
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -81,6 +81,7 @@ class Buffer:
         """Initialize wandb for buffer process if use_wandb is enabled"""
         if not hasattr(self.args, "use_wandb") or not self.args.use_wandb:
             return
+        wandb = require_wandb(self.args)
 
         # Check if wandb is already initialized in this process
         if wandb.run is not None:

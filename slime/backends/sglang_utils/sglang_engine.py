@@ -3,6 +3,7 @@ import dataclasses
 import os
 from typing import TYPE_CHECKING
 
+import ray
 from sglang.srt.server_args import ServerArgs
 from slime.utils.http_utils import get_host_info
 from .http_server_engine import HttpServerEngineAdapter
@@ -12,6 +13,20 @@ if TYPE_CHECKING:
 
 
 def get_base_gpu_id(args, rank):
+    try:
+        gpu_ids = ray.get_gpu_ids()
+        if gpu_ids:
+            return int(gpu_ids[0])
+    except Exception:
+        pass
+
+    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if cuda_visible_devices:
+        try:
+            return int(cuda_visible_devices.split(",")[0].strip())
+        except (TypeError, ValueError):
+            pass
+
     num_gpus = min(8, args.rollout_num_gpus_per_engine)
     if args.colocate:
         start_index = (rank * num_gpus) % 8

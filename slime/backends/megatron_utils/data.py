@@ -9,10 +9,10 @@ from megatron.core import mpu
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.core.utils import get_model_config
 
-import wandb
 from slime.utils.flops_utils import calculate_fwd_flops
 from slime.utils.seqlen_balancing import get_seqlen_balanced_partitions
 from slime.utils.timer import Timer
+from slime.utils.wandb_utils import require_wandb
 from .cp_utils import slice_with_cp
 from ..utils.data import DataIterator, get_minimum_num_micro_batch_size
 
@@ -206,6 +206,7 @@ def log_rollout_data(rollout_id, args, rollout_data):
             }
             print(f"rollout {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
+                wandb = require_wandb(args)
                 reduced_log_dict["rollout/step"] = (
                     rollout_id
                     if not args.wandb_always_use_train_step
@@ -287,6 +288,7 @@ def log_partial_rollout_data(rollout_id, args, rollout_data):
             }
             print(f"partial_rollout {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
+                wandb = require_wandb(args)
                 wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
@@ -344,6 +346,7 @@ def log_multi_turn_data(rollout_id, args, rollout_data):
             }
             print(f"multi_turn {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
+                wandb = require_wandb(args)
                 wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
@@ -407,6 +410,7 @@ def log_passrate(rollout_id, args, rollout_data):
             }
             print(f"passrate {rollout_id}: {reduced_log_dict}")
             if args.use_wandb:
+                wandb = require_wandb(args)
                 wandb.log(reduced_log_dict)
         else:
             dist.gather_object(
@@ -436,6 +440,7 @@ def log_eval_data(rollout_id, args, data_buffer):
 
         print(f"eval {rollout_id}: {log_dict}")
         if args.use_wandb:
+            wandb = require_wandb(args)
             log_dict["eval/step"] = (
                 rollout_id
                 if not args.wandb_always_use_train_step
@@ -474,6 +479,7 @@ def log_perf_data(rollout_id, args):
 
         print(f"perf {rollout_id}: {log_dict}")
         if args.use_wandb:
+            wandb = require_wandb(args)
             log_dict["rollout/step"] = (
                 rollout_id
                 if not args.wandb_always_use_train_step

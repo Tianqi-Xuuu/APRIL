@@ -1,18 +1,7 @@
 #!/bin/bash
 
-# Experimental single-GPU run config for Qwen3-4B.
-
-# for rerun the task
-pkill -9 sglang
-sleep 3
-ray stop --force
-pkill -9 ray
-sleep 3
-pkill -9 ray
-
 set -ex
 
-# will prevent ray from buffering stdout/stderr
 export PYTHONBUFFERED=16
 
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l)
@@ -21,38 +10,39 @@ if [ "$NVLINK_COUNT" -gt 0 ]; then
 else
     HAS_NVLINK=0
 fi
-echo "HAS_NVLINK: $HAS_NVLINK (detected $NVLINK_COUNT NVLink references)"
+
+ROLLOUT_BATCH_SIZE=${ROLLOUT_BATCH_SIZE:-32}
+OVER_SAMPLING_BATCH_SIZE=${OVER_SAMPLING_BATCH_SIZE:-$((ROLLOUT_BATCH_SIZE * 2))}
+N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
+ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
+SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.7}
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-source "${SCRIPT_DIR}/models/qwen3-4B.sh"
+source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
 
 CKPT_ARGS=(
-   --hf-checkpoint /root/Qwen3-4B
-   #--hf-checkpoint /root/Qwen3-4B-FP8
-   --ref-load /root/Qwen3-4B_torch_dist
-   --load /root/Qwen3-4B_slime/
-   --save /root/Qwen3-4B_slime/
-   --save-interval 1
+   --hf-checkpoint /root/Qwen3-1.7B
+   --ref-load /root/Qwen3-1.7B_torch_dist
+   --load /root/.slime-nonexistent-qwen3-1.7B-partial-bench-load
 )
 
 ROLLOUT_ARGS=(
-   --prompt-data /root/APRIL/data/minimal/train.jsonl
-   --input-key prompt
-   --label-key label
+   --prompt-data /root/dapo-math-17k/data/train-00000-of-00001.parquet
+   --input-key source_prompt
+   --label-key answer
    --apply-chat-template
    --rollout-shuffle
    --rm-type deepscaler
-   --num-rollout 3000
-   --rollout-batch-size 32
-   --n-samples-per-prompt 8
-   --rollout-max-response-len 8192
+   --num-rollout 1
+   --rollout-batch-size ${ROLLOUT_BATCH_SIZE}
+   --n-samples-per-prompt ${N_SAMPLES_PER_PROMPT}
+   --rollout-max-response-len ${ROLLOUT_MAX_RESPONSE_LEN}
    --rollout-temperature 0.8
-
-   --global-batch-size 4
+   --global-batch-size $((ROLLOUT_BATCH_SIZE * N_SAMPLES_PER_PROMPT))
    --balance-data
-)
-
-EVAL_ARGS=(
+   --partial-rollout
+   --over-sampling-batch-size ${OVER_SAMPLING_BATCH_SIZE}
+   --dynamic-sampling-filter-path slime.rollout.filter_hub.dynamic_sampling_filters.check_reward_nonzero_std
 )
 
 PERF_ARGS=(
@@ -61,14 +51,11 @@ PERF_ARGS=(
    --context-parallel-size 1
    --expert-model-parallel-size 1
    --expert-tensor-parallel-size 1
-
    --recompute-granularity full
    --recompute-method uniform
    --recompute-num-layers 1
-
-   # --micro-batch-size 1
    --use-dynamic-batch-size
-   --max-tokens-per-gpu 1024
+   --max-tokens-per-gpu 2048
 )
 
 GRPO_ARGS=(
@@ -80,43 +67,24 @@ GRPO_ARGS=(
    --eps-clip-high 0.28
 )
 
-OPTIMIZER_ARGS=(
-   --optimizer adam
-   --lr 1e-6
-   --lr-decay-style constant
-   --weight-decay 0.1
-   --adam-beta1 0.9
-   --adam-beta2 0.98
-   --optimizer-cpu-offload
-   --overlap-cpu-optimizer-d2h-h2d
-   --use-precision-aware-optimizer
-)
-
-WANDB_ARGS=(
-)
-
 SGLANG_ARGS=(
    --rollout-num-gpus-per-engine 1
-   --sglang-mem-fraction-static 0.2
+   --sglang-mem-fraction-static ${SGLANG_MEM_FRACTION}
    --sglang-disable-cuda-graph
 )
 
 MISC_ARGS=(
-   # default dropout in megatron is 0.1
    --attention-dropout 0.0
    --hidden-dropout 0.0
-   # should be good for model performance
    --accumulate-allreduce-grads-in-fp32
    --attention-softmax-in-fp32
-   # need to comment this when using model with MLA
    --attention-backend flash
 )
 
-# launch the master node of ray in container
 export MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
+ray stop --force || true
 ray start --head --node-ip-address ${MASTER_ADDR} --num-gpus 1 --disable-usage-stats
 
-# Build the runtime environment JSON with proper variable substitution
 RUNTIME_ENV_JSON="{
   \"env_vars\": {
     \"PYTHONPATH\": \"/root/Megatron-LM/\",
@@ -128,17 +96,14 @@ RUNTIME_ENV_JSON="{
 ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json="${RUNTIME_ENV_JSON}" \
    -- python3 train.py \
+   --debug-rollout-only \
    --actor-num-nodes 1 \
    --actor-num-gpus-per-node 1 \
    --colocate \
    ${MODEL_ARGS[@]} \
    ${CKPT_ARGS[@]} \
    ${ROLLOUT_ARGS[@]} \
-   ${OPTIMIZER_ARGS[@]} \
    ${GRPO_ARGS[@]} \
-   ${DISTRIBUTED_ARGS[@]} \
-   ${WANDB_ARGS[@]} \
    ${PERF_ARGS[@]} \
-   ${EVAL_ARGS[@]} \
    ${SGLANG_ARGS[@]} \
    ${MISC_ARGS[@]}

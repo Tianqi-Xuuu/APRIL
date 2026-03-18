@@ -181,6 +181,8 @@ class RolloutGroup:
             host=self.args.sglang_router_ip,
             port=self.args.sglang_router_port,
             balance_abs_threshold=0,
+            prometheus_port=find_available_port(random.randint(28000, 29000)),
+            prometheus_host="127.0.0.1",
         )
 
         if hasattr(router_args, "log_level"):

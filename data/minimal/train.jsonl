@@ -1,0 +1,2 @@
+{"prompt":[{"role":"user","content":"Solve step by step. What is 1 + 1? Put the final result on its own line as Answer: \\boxed{2}."}],"label":"2"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 2 + 3? Put the final result on its own line as Answer: \\boxed{5}."}],"label":"5"}

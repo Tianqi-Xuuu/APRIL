@@ -7,7 +7,7 @@ from megatron.core import mpu, tensor_parallel
 from megatron.core.num_microbatches_calculator import init_num_microbatches_calculator
 from megatron.training.global_vars import _build_tokenizer, set_args
 
-import wandb
+from slime.utils.wandb_utils import require_wandb
 
 GLOO_GROUP = None
 
@@ -110,6 +110,7 @@ def init(args):
         and mpu.get_tensor_model_parallel_rank() == 0
         and mpu.get_pipeline_model_parallel_rank() == mpu.get_pipeline_model_parallel_world_size() - 1
     ):
+        wandb = require_wandb(args)
         if args.wandb_key is not None:
             wandb.login(key=args.wandb_key, host=args.wandb_host)
         # add random 6 length string with characters

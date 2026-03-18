@@ -1,0 +1,8 @@
+{"prompt":[{"role":"user","content":"Solve step by step. What is 1 + 1? Put the final result on its own line as Answer: \\boxed{2}."}],"label":"2"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 2 + 3? Put the final result on its own line as Answer: \\boxed{5}."}],"label":"5"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 4 + 7? Put the final result on its own line as Answer: \\boxed{11}."}],"label":"11"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 6 + 8? Put the final result on its own line as Answer: \\boxed{14}."}],"label":"14"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 9 + 5? Put the final result on its own line as Answer: \\boxed{14}."}],"label":"14"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 10 + 12? Put the final result on its own line as Answer: \\boxed{22}."}],"label":"22"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 13 + 4? Put the final result on its own line as Answer: \\boxed{17}."}],"label":"17"}
+{"prompt":[{"role":"user","content":"Solve step by step. What is 15 + 6? Put the final result on its own line as Answer: \\boxed{21}."}],"label":"21"}

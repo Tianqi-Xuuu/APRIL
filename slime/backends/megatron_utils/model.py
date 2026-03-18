@@ -16,8 +16,8 @@ from megatron.core.utils import get_model_config
 from megatron.training.global_vars import get_args
 from megatron.training.training import get_model
 
-import wandb
 from slime.utils.memory_utils import clear_memory
+from slime.utils.wandb_utils import require_wandb
 
 from .checkpoint import load_checkpoint, save_checkpoint
 from .data import get_batch
@@ -465,6 +465,7 @@ def train(rollout_id, model, optimizer, opt_param_scheduler, data_iterator, num_
                 log_dict[f"train/lr-pg_{param_group_id}"] = opt_param_scheduler.get_lr(param_group)
 
             if args.use_wandb:
+                wandb = require_wandb(args)
                 log_dict["train/step"] = accumulated_step_id
                 wandb.log(log_dict)
 
