@@ -1,0 +1,6 @@
+run_name,status,exit_code
+qwen3-1.7b-non-provision-bs16,succeeded,0
+qwen3-1.7b-provision-1p5x-bs16,succeeded,0
+qwen3-1.7b-provision-2p0x-bs16,succeeded,0
+qwen3-1.7b-provision-2p5x-bs16,succeeded,0
+qwen3-1.7b-provision-3p0x-bs16,succeeded,0

@@ -8,6 +8,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
+def metric_value(metric: dict, key: str):
+    if key in metric:
+        return metric[key]
+    prefixed = f"partial_rollout/{key}"
+    return metric.get(prefixed)
+
+
 def parse_rollout_metrics(log_path: Path) -> list[dict]:
     metrics = []
     if not log_path.exists():
@@ -15,8 +22,9 @@ def parse_rollout_metrics(log_path: Path) -> list[dict]:
     with log_path.open("r", encoding="utf-8", errors="ignore") as f:
         for line in f:
             line = line.strip()
-            if line.startswith("partial_rollout ") and ": {" in line:
-                payload = line.split(": ", 1)[1]
+            marker = "partial_rollout "
+            if marker in line and ": {" in line:
+                payload = line.split(marker, 1)[1].split(": ", 1)[1]
                 metrics.append(ast.literal_eval(payload))
     return metrics
 
@@ -42,9 +50,11 @@ def summarize_run(run_dir: Path) -> dict | None:
     if not metrics:
         return None
 
-    tokens_per_sec = [m["tokens_throughput"] for m in metrics if "tokens_throughput" in m]
-    rollout_time = [m["rollout_time"] for m in metrics if "rollout_time" in m]
-    total_tokens = [m["total_tokens"] for m in metrics if "total_tokens" in m]
+    tokens_per_sec = [v for m in metrics if (v := metric_value(m, "tokens_throughput")) is not None]
+    rollout_time = [v for m in metrics if (v := metric_value(m, "rollout_time")) is not None]
+    total_tokens = [v for m in metrics if (v := metric_value(m, "total_tokens")) is not None]
+    off_policy_ratio = [v for m in metrics if (v := metric_value(m, "off_policy_ratio")) is not None]
+    partial_samples = [v for m in metrics if (v := metric_value(m, "partial_samples")) is not None]
 
     if not tokens_per_sec:
         return None
@@ -58,6 +68,8 @@ def summarize_run(run_dir: Path) -> dict | None:
         "tokens_per_sec_max": max(tokens_per_sec),
         "rollout_time_mean": sum(rollout_time) / len(rollout_time) if rollout_time else None,
         "total_tokens_mean": sum(total_tokens) / len(total_tokens) if total_tokens else None,
+        "off_policy_ratio_mean": sum(off_policy_ratio) / len(off_policy_ratio) if off_policy_ratio else None,
+        "partial_samples_mean": sum(partial_samples) / len(partial_samples) if partial_samples else None,
     }
 
 
@@ -72,6 +84,8 @@ def write_csv(rows: list[dict], output_csv: Path) -> None:
         "tokens_per_sec_max",
         "rollout_time_mean",
         "total_tokens_mean",
+        "off_policy_ratio_mean",
+        "partial_samples_mean",
     ]
     with output_csv.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -89,6 +103,23 @@ def plot_rows(rows: list[dict], output_plot: Path) -> None:
     plt.title("Qwen3-1.7B Tokens/sec vs Provision Size")
     plt.xlabel("Provision Size")
     plt.ylabel("Mean tokens/sec")
+    plt.grid(True, axis="y", linestyle="--", alpha=0.35)
+    plt.tight_layout()
+    output_plot.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_plot, dpi=160)
+    plt.close()
+
+
+def plot_metric(rows: list[dict], key: str, title: str, ylabel: str, output_plot: Path, color: str) -> None:
+    ordered = sorted(rows, key=lambda row: provision_order(row["provision_label"]))
+    x_labels = [row["provision_label"] for row in ordered]
+    y = [row[key] for row in ordered]
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(x_labels, y, marker="o", linewidth=2, color=color)
+    plt.title(title)
+    plt.xlabel("Provision Size")
+    plt.ylabel(ylabel)
     plt.grid(True, axis="y", linestyle="--", alpha=0.35)
     plt.tight_layout()
     output_plot.parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +146,23 @@ def main() -> None:
 
     write_csv(rows, Path(args.output_csv))
     plot_rows(rows, Path(args.output_plot))
+    output_dir = Path(args.output_plot).parent
+    plot_metric(
+        rows,
+        "off_policy_ratio_mean",
+        "Qwen3-1.7B Off-Policy Ratio vs Provision Size",
+        "Mean off-policy ratio",
+        output_dir / "off_policy_ratio_vs_provision.png",
+        "#d62728",
+    )
+    plot_metric(
+        rows,
+        "partial_samples_mean",
+        "Qwen3-1.7B Partial Samples vs Provision Size",
+        "Mean partial samples",
+        output_dir / "partial_samples_vs_provision.png",
+        "#2ca02c",
+    )
 
     for row in sorted(rows, key=lambda item: provision_order(item["provision_label"])):
         print(
