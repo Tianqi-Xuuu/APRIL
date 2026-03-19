@@ -1,0 +1,11 @@
+{
+  "num_samples_total": 7488,
+  "num_samples_non_padding": 7473,
+  "response_length_mean": 936.8538739462064,
+  "response_length_p50": 608.0,
+  "response_length_p90": 1997.8000000000002,
+  "response_length_p99": 4096.0,
+  "response_length_max": 4096,
+  "completion_tokens_mean": 937.8269771176234,
+  "completion_tokens_max": 4096
+}
