@@ -173,6 +173,8 @@ def log_rollout_data(rollout_id, args, rollout_data):
                 or key == "total_off_policy_tokens"
                 or key == "sample_indices"
                 or key == "sample_metadata"
+                or key == "prompts"
+                or key == "responses"
             ):
                 continue
             # Upload per sample mean for each rollout value

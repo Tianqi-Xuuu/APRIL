@@ -18,13 +18,14 @@ def extract_final_answer(answer_text: str) -> str:
     return answer_text.strip()
 
 
-def build_prompt(question: str) -> str:
-    return (
+def build_prompt(question: str) -> list[dict[str, str]]:
+    prompt = (
         "Solve the following math problem step by step. "
         "The last line of your response should be of the form "
         "Answer: $Answer (without quotes) where $Answer is the answer "
         f"to the problem.\n\n{question.strip()}{SYSTEM_SUFFIX}"
     )
+    return [{"role": "user", "content": prompt}]
 
 
 def main() -> None:
