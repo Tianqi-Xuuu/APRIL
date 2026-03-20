@@ -18,8 +18,10 @@ WATCHDOG_POLL_SECONDS=${WATCHDOG_POLL_SECONDS:-20}
 WATCHDOG_STALL_SECONDS=${WATCHDOG_STALL_SECONDS:-180}
 WATCHDOG_MAX_RESTARTS=${WATCHDOG_MAX_RESTARTS:-5}
 WATCHDOG_HEALTHCHECK_GRACE_SECONDS=${WATCHDOG_HEALTHCHECK_GRACE_SECONDS:-180}
+WATCHDOG_MISSING_WORKER_POLLS=${WATCHDOG_MISSING_WORKER_POLLS:-3}
 WATCHDOG_FAULT_INJECT_GROUP=${WATCHDOG_FAULT_INJECT_GROUP:-}
 WATCHDOG_FAULT_INJECT_DELAY_SECONDS=${WATCHDOG_FAULT_INJECT_DELAY_SECONDS:-0}
+RUN_GROUPS=${RUN_GROUPS:-non,2p0x,3p0x}
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
@@ -122,17 +124,71 @@ start_ray_cluster() {
     ray start --head --node-ip-address "${MASTER_ADDR}" --num-gpus 1 --disable-usage-stats
 }
 
-stop_job_and_logs() {
-    local submission_id="$1"
-    local log_pid="${2:-}"
+cleanup_run_processes() {
+    local run_root="$1"
+    local submission_id="${2:-}"
+    local log_pid="${3:-}"
 
     if [ -n "${submission_id}" ]; then
         ray job stop "${submission_id}" >/dev/null 2>&1 || true
+        pkill -f "ray job logs ${submission_id}" >/dev/null 2>&1 || true
     fi
 
     if [ -n "${log_pid}" ] && kill -0 "${log_pid}" >/dev/null 2>&1; then
         kill "${log_pid}" >/dev/null 2>&1 || true
         wait "${log_pid}" >/dev/null 2>&1 || true
+    fi
+
+    RUN_ROOT_CLEANUP_TARGET="${run_root}" python3 - <<'PY'
+import os
+import signal
+import subprocess
+import time
+
+run_root = os.environ["RUN_ROOT_CLEANUP_TARGET"]
+
+def matching_pids():
+    ps = subprocess.check_output(["ps", "-eo", "pid,args"], text=True)
+    pids = []
+    for line in ps.splitlines()[1:]:
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
+            continue
+        pid_s, cmd = parts
+        pid = int(pid_s)
+        if pid == os.getpid():
+            continue
+        if run_root not in cmd:
+            continue
+        if "python3 train.py" in cmd or "ray job logs" in cmd:
+            pids.append(pid)
+    return sorted(set(pids))
+
+for sig in (signal.SIGTERM, signal.SIGKILL):
+    pids = matching_pids()
+    if not pids:
+        break
+    for pid in pids:
+        try:
+            os.kill(pid, sig)
+        except ProcessLookupError:
+            pass
+    for _ in range(10):
+        time.sleep(1)
+        if not matching_pids():
+            break
+else:
+    time.sleep(1)
+PY
+}
+
+stop_job_and_logs() {
+    local submission_id="$1"
+    local log_pid="${2:-}"
+    local run_root="${3:-}"
+
+    if [ -n "${run_root}" ]; then
+        cleanup_run_processes "${run_root}" "${submission_id}" "${log_pid}"
     fi
 }
 
@@ -145,14 +201,7 @@ follow_job_logs() {
 }
 
 get_worker_pid_on_port_10000() {
-    ss -ltnp 2>/dev/null | awk '
-        /:10000 / {
-            if (match($0, /pid=([0-9]+)/, m)) {
-                print m[1];
-                exit;
-            }
-        }
-    '
+    ss -ltnp 2>/dev/null | grep ':10000 ' | head -n 1 | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p'
 }
 
 watch_job() {
@@ -160,11 +209,14 @@ watch_job() {
     local run_name="$2"
     local run_root="$3"
     local log_pid="$4"
+    local inject_marker="$5"
     local driver_log="/tmp/ray/session_latest/logs/job-driver-${submission_id}.log"
     local start_ts
     local last_progress_ts
     local last_size
     local worker_started=0
+    local worker_healthy_ts=0
+    local missing_worker_polls=0
     local injected=0
 
     start_ts=$(date +%s)
@@ -198,23 +250,36 @@ watch_job() {
 
         if grep -q "Uvicorn running on http://.*:10000" "${run_root}/job_output.log" 2>/dev/null; then
             worker_started=1
+            if [ "${worker_healthy_ts}" = "0" ]; then
+                worker_healthy_ts="${now}"
+            fi
         fi
 
         if [ "${worker_started}" = "1" ] && [ "${WATCHDOG_FAULT_INJECT_GROUP}" = "${run_name}" ] \
             && [ "${WATCHDOG_FAULT_INJECT_DELAY_SECONDS}" -gt 0 ] && [ "${injected}" = "0" ] \
-            && [ $((now - start_ts)) -ge "${WATCHDOG_FAULT_INJECT_DELAY_SECONDS}" ]; then
+            && [ ! -f "${inject_marker}" ] \
+            && [ $((now - worker_healthy_ts)) -ge "${WATCHDOG_FAULT_INJECT_DELAY_SECONDS}" ]; then
             local worker_pid
             worker_pid=$(get_worker_pid_on_port_10000 || true)
             if [ -n "${worker_pid}" ]; then
                 echo "[watchdog] ${run_name}: fault-inject killing rollout worker pid ${worker_pid} on :10000"
                 kill -9 "${worker_pid}" >/dev/null 2>&1 || true
                 injected=1
+                touch "${inject_marker}"
             fi
         fi
 
-        if [ "${worker_started}" = "1" ] && ! ss -ltn 2>/dev/null | grep -q ':10000 '; then
-            echo "[watchdog] ${run_name}: rollout worker on :10000 disappeared."
-            return 2
+        if [ "${worker_started}" = "1" ] && [ "${worker_healthy_ts}" != "0" ] \
+            && [ $((now - worker_healthy_ts)) -ge "${WATCHDOG_HEALTHCHECK_GRACE_SECONDS}" ]; then
+            if ss -ltn 2>/dev/null | grep -q ':10000 '; then
+                missing_worker_polls=0
+            else
+                missing_worker_polls=$((missing_worker_polls + 1))
+                if [ "${missing_worker_polls}" -ge "${WATCHDOG_MISSING_WORKER_POLLS}" ]; then
+                    echo "[watchdog] ${run_name}: rollout worker on :10000 disappeared."
+                    return 2
+                fi
+            fi
         fi
 
         if [ -f "${driver_log}" ] && grep -q "Removing failed worker\|PoisonError" "${driver_log}" 2>/dev/null; then
@@ -236,7 +301,9 @@ run_job() {
 
     local run_root="${RUN_ROOT_BASE}/${run_name}"
     local load_path="/root/.slime-nonexistent-qwen3-1.7B-offpolicy-matrix-bs-half-load"
+    local inject_marker="${run_root}/.watchdog_fault_injected"
     mkdir -p "${run_root}"
+    rm -f "${inject_marker}"
 
     if [ -f "${run_root}/latest_checkpointed_iteration.txt" ]; then
         load_path="${run_root}"
@@ -255,6 +322,7 @@ run_job() {
         local log_pid=""
         local submit_output=""
 
+        cleanup_run_processes "${run_root}"
         echo "=== ${run_name}: launch attempt ${attempt} ===" | tee -a "${run_root}/job_output.log"
 
         submit_output=$(
@@ -289,12 +357,12 @@ run_job() {
             return 0
         fi
 
-        if watch_job "${submission_id}" "${run_name}" "${run_root}" "${log_pid}"; then
+        if watch_job "${submission_id}" "${run_name}" "${run_root}" "${log_pid}" "${inject_marker}"; then
             echo "=== ${run_name}: completed successfully ===" | tee -a "${run_root}/job_output.log"
             return 0
         fi
 
-        stop_job_and_logs "${submission_id}" "${log_pid}"
+        stop_job_and_logs "${submission_id}" "${log_pid}" "${run_root}"
         attempt=$((attempt + 1))
         if [ "${attempt}" -gt "${WATCHDOG_MAX_RESTARTS}" ]; then
             echo "=== ${run_name}: exceeded watchdog restart budget (${WATCHDOG_MAX_RESTARTS}) ===" | tee -a "${run_root}/job_output.log"
@@ -306,12 +374,18 @@ run_job() {
     done
 }
 
-run_job "qwen3-1.7b-train-non-provision-bs24-r${NUM_ROLLOUT}" 24
+if [[ ",${RUN_GROUPS}," == *",non,"* ]]; then
+    run_job "qwen3-1.7b-train-non-provision-bs24-r${NUM_ROLLOUT}" 24
+fi
 
-run_job "qwen3-1.7b-train-provision-2p0x-bs12-r${NUM_ROLLOUT}" 12 \
-    --partial-rollout \
-    --over-sampling-batch-size 24
+if [[ ",${RUN_GROUPS}," == *",2p0x,"* ]]; then
+    run_job "qwen3-1.7b-train-provision-2p0x-bs12-r${NUM_ROLLOUT}" 12 \
+        --partial-rollout \
+        --over-sampling-batch-size 24
+fi
 
-run_job "qwen3-1.7b-train-provision-3p0x-bs8-r${NUM_ROLLOUT}" 8 \
-    --partial-rollout \
-    --over-sampling-batch-size 24
+if [[ ",${RUN_GROUPS}," == *",3p0x,"* ]]; then
+    run_job "qwen3-1.7b-train-provision-3p0x-bs8-r${NUM_ROLLOUT}" 8 \
+        --partial-rollout \
+        --over-sampling-batch-size 24
+fi
