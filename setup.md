@@ -182,6 +182,14 @@ print(df.iloc[0].to_dict())
 PY
 ```
 
+### 4.4 固定小评估集
+
+为了避免训练时 `eval` 比 rollout 更慢，当前推荐固定使用一个小的 GSM8K test subset：
+
+- `/root/gsm8k/data/gsm8k-test.subset256.seed1234.parquet`
+
+如果这个文件还不存在，可以按固定随机种子从 `gsm8k-test.parquet` 抽出 `256` 条，供不同实验组共用。当前仓库脚本默认已经优先使用这个 subset。
+
 ## 5. 快速开始
 
 ### 5.1 No-partial rollout smoke

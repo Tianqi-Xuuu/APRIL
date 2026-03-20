@@ -10,7 +10,9 @@ SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.70}
 NUM_ROLLOUT=${NUM_ROLLOUT:-30}
 EVAL_INTERVAL=${EVAL_INTERVAL:-5}
 INPUT_DATA=${INPUT_DATA:-/root/gsm8k/data/gsm8k-train.parquet}
-EVAL_DATA=${EVAL_DATA:-/root/gsm8k/data/gsm8k-test.parquet}
+EVAL_DATA=${EVAL_DATA:-/root/gsm8k/data/gsm8k-test.subset256.seed1234.parquet}
+EVAL_DATA_NAME=${EVAL_DATA_NAME:-gsm8k_test_subset256}
+N_SAMPLES_PER_EVAL_PROMPT=${N_SAMPLES_PER_EVAL_PROMPT:-1}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-/root/APRIL/runs/offpolicy-matrix-bs-half-r${NUM_ROLLOUT}-qwen3-1.7b-len${ROLLOUT_MAX_RESPONSE_LEN}}
 FORCE_RAY_RESTART=${FORCE_RAY_RESTART:-1}
 WATCHDOG_ENABLED=${WATCHDOG_ENABLED:-1}
@@ -55,8 +57,8 @@ COMMON_DATA_ARGS=(
    --rollout-temperature 0.8
    --balance-data
    --eval-interval "${EVAL_INTERVAL}"
-   --eval-prompt-data gsm8k_test "${EVAL_DATA}"
-   --n-samples-per-eval-prompt 4
+   --eval-prompt-data "${EVAL_DATA_NAME}" "${EVAL_DATA}"
+   --n-samples-per-eval-prompt "${N_SAMPLES_PER_EVAL_PROMPT}"
    --eval-max-response-len "${ROLLOUT_MAX_RESPONSE_LEN}"
    --eval-top-p 0.7
 )
