@@ -272,6 +272,71 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         ppo_kl = old_log_probs - log_probs
 
     pg_loss, pg_clipfrac = compute_policy_loss(ppo_kl, advantages, args.eps_clip, args.eps_clip_high)
+
+    m2po_log = {
+        "m2po_eligible_tokens": torch.tensor(0.0, device=ppo_kl.device),
+        "m2po_masked_tokens": torch.tensor(0.0, device=ppo_kl.device),
+        "m2po_masked_ratio": torch.tensor(0.0, device=ppo_kl.device),
+    }
+    if args.m2po_enable and pg_loss.numel() > 0:
+        with torch.no_grad():
+            eligible_mask = pg_clipfrac > 0
+
+            if args.m2po_only_carryover and sample_metadata is not None:
+                token_counts = [x.numel() for x in batch["log_probs"]]
+                carryover_mask_list = []
+                for metadata, token_count in zip(sample_metadata, token_counts):
+                    is_carryover = False
+                    if isinstance(metadata, dict):
+                        start_rollout_id = metadata.get("start_rollout_id", None)
+                        final_rollout_id = metadata.get("final_rollout_id", None)
+                        is_carryover = (
+                            start_rollout_id is not None
+                            and final_rollout_id is not None
+                            and start_rollout_id != final_rollout_id
+                        )
+                    carryover_mask_list.append(
+                        torch.full(
+                            (token_count,),
+                            bool(is_carryover),
+                            device=ppo_kl.device,
+                            dtype=torch.bool,
+                        )
+                    )
+                if carryover_mask_list:
+                    carryover_mask = torch.cat(carryover_mask_list, dim=0)
+                    if carryover_mask.numel() == eligible_mask.numel():
+                        eligible_mask = eligible_mask & carryover_mask
+
+            eligible_count = int(eligible_mask.sum().item())
+            if eligible_count > 0:
+                m2po_log["m2po_eligible_tokens"] = torch.tensor(float(eligible_count), device=ppo_kl.device)
+
+                topk_percent = min(max(float(args.m2po_mask_topk_percent), 0.0), 1.0)
+                min_mask_tokens = max(int(args.m2po_min_mask_tokens), 0)
+                target_mask = max(min_mask_tokens, int(eligible_count * topk_percent))
+                target_mask = min(target_mask, eligible_count)
+
+                if target_mask > 0:
+                    score = ppo_kl.square()
+                    eligible_indices = eligible_mask.nonzero(as_tuple=False).flatten()
+                    eligible_scores = score[eligible_indices]
+                    topk_pos = torch.topk(eligible_scores, k=target_mask, sorted=False).indices
+                    masked_indices = eligible_indices[topk_pos]
+
+                    token_keep_mask = torch.ones_like(ppo_kl, dtype=torch.float32)
+                    token_keep_mask[masked_indices] = 0.0
+
+                    pg_loss = pg_loss * token_keep_mask
+                    pg_clipfrac = pg_clipfrac * token_keep_mask
+
+                    masked_count = int(masked_indices.numel())
+                    m2po_log["m2po_masked_tokens"] = torch.tensor(float(masked_count), device=ppo_kl.device)
+                    m2po_log["m2po_masked_ratio"] = torch.tensor(
+                        float(masked_count) / max(float(eligible_count), 1.0),
+                        device=ppo_kl.device,
+                    )
+
     pg_loss = sum_of_sample_mean(pg_loss)
     pg_clipfrac = sum_of_sample_mean(pg_clipfrac)
     ppo_kl = sum_of_sample_mean(ppo_kl)
@@ -347,6 +412,9 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
             "pg_clipfrac": pg_clipfrac.clone().detach(),
             "ppo_kl": ppo_kl.clone().detach(),
             "kl_loss": kl_loss.clone().detach(),
+            "m2po_eligible_tokens": m2po_log["m2po_eligible_tokens"].clone().detach(),
+            "m2po_masked_tokens": m2po_log["m2po_masked_tokens"].clone().detach(),
+            "m2po_masked_ratio": m2po_log["m2po_masked_ratio"].clone().detach(),
         },
     )
 

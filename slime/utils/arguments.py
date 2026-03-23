@@ -557,6 +557,33 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
             parser.add_argument("--gamma", type=float, default=1.0, help="Discount factor for rewards in REINFORCE++.")
             parser.add_argument("--normalize-advantages", action="store_true", default=False)
             parser.add_argument(
+                "--m2po-enable",
+                action="store_true",
+                default=False,
+                help="Enable selective clip-masking for extreme outlier tokens.",
+            )
+            parser.add_argument(
+                "--m2po-only-carryover",
+                action="store_true",
+                default=False,
+                help=(
+                    "Only apply m2po masking to carry-over samples identified by sample metadata "
+                    "(start_rollout_id != final_rollout_id)."
+                ),
+            )
+            parser.add_argument(
+                "--m2po-mask-topk-percent",
+                type=float,
+                default=0.01,
+                help="Top percentile to mask among eligible clipped tokens, e.g. 0.01 for top 1%%.",
+            )
+            parser.add_argument(
+                "--m2po-min-mask-tokens",
+                type=int,
+                default=1,
+                help="Minimum number of outlier tokens to mask when eligible clipped tokens exist.",
+            )
+            parser.add_argument(
                 "--disable-grpo-std-normalization",
                 action="store_false",
                 dest="grpo_std_normalization",
