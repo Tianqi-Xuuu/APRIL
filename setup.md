@@ -1,12 +1,17 @@
 # APRIL Setup Guide
 
-这份文档面向之后在新环境里从零开始使用 APRIL 的场景，默认只使用：
+这份文档面向之后在新环境里从零开始使用 APRIL 的场景。当前仓库里已经实际跑过两条主线：
 
-- 模型：`Qwen3-1.7B`
-- 数据集：`GSM8K`
-- 硬件：单张 GPU
+- `Qwen3-1.7B + GSM8K`
+- `Qwen2.5-3B + competition_math (Level 2 shortprompt / Level 4 variants)`
 
-如果你的目标是先跑通、再做 no-partial / partial-rollout 对照，这份文档可以直接照着执行。
+默认硬件假设仍然是：
+
+- 单张 GPU
+
+如果你的目标是先跑通，再做 `non-provision / provision` 对照，这份文档可以直接照着执行。当前最推荐的主线是：
+
+- `Qwen2.5-3B + Level 2 shortprompt + subset64 eval`
 
 ## 1. 目录约定
 
@@ -14,9 +19,12 @@
 
 - 代码目录：`/root/APRIL`
 - Megatron-LM：`/root/Megatron-LM`
-- HF 模型目录：`/root/Qwen3-1.7B`
-- Megatron `torch_dist` 目录：`/root/Qwen3-1.7B_torch_dist`
-- GSM8K 输出目录：`/root/gsm8k/data`
+- `Qwen3-1.7B` HF 目录：`/root/Qwen3-1.7B`
+- `Qwen3-1.7B` `torch_dist`：`/root/Qwen3-1.7B_torch_dist`
+- `Qwen2.5-3B` HF 目录：`/root/Qwen2.5-3B`
+- `Qwen2.5-3B` `torch_dist`：`/root/Qwen2.5-3B_torch_dist`
+- GSM8K 数据目录：`/root/gsm8k/data`
+- competition_math 数据目录：`/root/math_level12/data`
 
 如果你想改路径，后面的命令里同步替换即可。
 
@@ -83,6 +91,8 @@ PYTHONPATH=/root/Megatron-LM
 
 ### 3.1 下载 Hugging Face 模型
 
+#### Qwen3-1.7B
+
 ```bash
 huggingface-cli download Qwen/Qwen3-1.7B --local-dir /root/Qwen3-1.7B
 ```
@@ -93,7 +103,15 @@ huggingface-cli download Qwen/Qwen3-1.7B --local-dir /root/Qwen3-1.7B
 
 就会直接使用这个目录。
 
+#### Qwen2.5-3B
+
+```bash
+huggingface-cli download Qwen/Qwen2.5-3B --local-dir /root/Qwen2.5-3B
+```
+
 ### 3.2 转换成 Megatron 可加载的 `torch_dist`
+
+#### Qwen3-1.7B
 
 APRIL 的 actor / reference 初始化依赖 `--ref-load`，这里需要先把 HF 权重转成 `torch_dist`。
 
@@ -115,6 +133,15 @@ cat /root/Qwen3-1.7B_torch_dist/latest_checkpointed_iteration.txt
 
 正常情况下，目录里会有 `.distcp` 文件和 `latest_checkpointed_iteration.txt`。
 
+#### Qwen2.5-3B
+
+```bash
+cd /root/APRIL
+PYTHONPATH=/root/Megatron-LM python tools/convert_hf_to_torch_dist.py \
+  --hf-checkpoint /root/Qwen2.5-3B \
+  --save /root/Qwen2.5-3B_torch_dist
+```
+
 ### 3.3 `hf-checkpoint` 和 `ref-load` 的区别
 
 这两个参数很容易混：
@@ -129,9 +156,19 @@ cat /root/Qwen3-1.7B_torch_dist/latest_checkpointed_iteration.txt
 --ref-load /root/Qwen3-1.7B_torch_dist
 ```
 
+对 `Qwen2.5-3B` 来说，对应就是：
+
+```text
+--hf-checkpoint /root/Qwen2.5-3B
+--ref-load /root/Qwen2.5-3B_torch_dist
+```
+
 ## 4. 数据集准备
 
-你之后只用 `GSM8K`，这里直接准备成 APRIL 现在能吃的 parquet 格式。
+当前仓库里已经准备好的主要数据有两类：
+
+- `GSM8K`
+- `competition_math` 的 level 子集和 prompt 变体
 
 ### 4.1 生成 GSM8K parquet
 
@@ -190,9 +227,127 @@ PY
 
 如果这个文件还不存在，可以按固定随机种子从 `gsm8k-test.parquet` 抽出 `256` 条，供不同实验组共用。当前仓库脚本默认已经优先使用这个 subset。
 
+### 4.5 competition_math / MATH level 数据
+
+当前已经准备好的核心文件在：
+
+- `Level 2 train`: `/root/math_level12/data/math-level2-train.parquet`
+- `Level 2 test`: `/root/math_level12/data/math-level2-test.parquet`
+- `Level 2 shortprompt train`: `/root/math_level12/data/math-level2-train.shortprompt.parquet`
+- `Level 2 shortprompt test`: `/root/math_level12/data/math-level2-test.shortprompt.parquet`
+- `Level 2 shortprompt subset64`: `/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet`
+- `Level 4 train`: `/root/math_level12/data/math-level4-train.parquet`
+- `Level 4 stepthink train`: `/root/math_level12/data/math-level4-train.stepthink.parquet`
+- `Level 4 shortprompt train`: `/root/math_level12/data/math-level4-train.shortprompt.parquet`
+- `Level 4 subset64`: `/root/math_level12/data/math-level4-test.subset64.seed1234.parquet`
+- `Level 5 train`: `/root/math_level12/data/math-level5-train.parquet`
+- `Level 5 short / minprompt 变体`
+
+当前 prompt 变体里最常用的是：
+
+- `stepthink`
+  - 适合观察更长推理
+- `shortprompt`
+  - 更适合控制长度
+- `minprompt`
+  - 进一步压缩输出
+
+如果你要做 `Qwen2.5-3B` 的 `non-prov / provision` 对照，当前推荐优先使用：
+
+- train: `/root/math_level12/data/math-level2-train.shortprompt.parquet`
+- eval: `/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet`
+
+### 4.6 reward 对齐说明
+
+当前 `deepscaler` 已经修过，不再要求 response 里必须先出现 `</think>` 或 `###Response`。
+
+现在这几种形式都会被正常抽答案：
+
+- `Answer: \boxed{123}`
+- 只有 `\boxed{123}`
+- 没有 `</think>` 的普通解题回答
+
+所以当前数学数据建议统一用：
+
+```text
+Answer: \boxed{123}
+```
+
+不用再依赖 `step-by-step + </think>` 这种格式。
+
 ## 5. 快速开始
 
-### 5.1 No-partial rollout smoke
+### 5.0 先清场
+
+现在 `1.7B` 和 `Qwen2.5-3B` 主脚本都会先调用：
+
+- `/root/APRIL/scripts/lib/train_cleanup.sh`
+
+它会在每次启动前：
+
+- 清残留 `train.py`
+- 清残留 `ray job submit/logs`
+- `ray stop --force`
+- 再重启新的 Ray head
+
+这样能避免旧 session 污染新实验。
+
+### 5.1 Qwen2.5-3B 训练主线
+
+这是当前最推荐的正式训练入口。它已经支持：
+
+- 启动前自动清场
+- 自动根据数据集生成 `RUN_NAME`
+- 小 eval subset
+- `--keep-only-latest-checkpoint`
+- 如果同一 `RUN_ROOT` 下已有 checkpoint，则自动 resume
+
+当前推荐配置：
+
+- train: `/root/math_level12/data/math-level2-train.shortprompt.parquet`
+- eval: `/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet`
+
+直接启动：
+
+```bash
+cd /root/APRIL
+INPUT_DATA=/root/math_level12/data/math-level2-train.shortprompt.parquet \
+EVAL_DATA=/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet \
+ROLL_OUT_BATCH_SIZE=8 \
+N_SAMPLES_PER_PROMPT=8 \
+NUM_ROLLOUT=30 \
+bash /root/APRIL/scripts/run-qwen2.5-3B.train-math-level4.sh
+```
+
+如果要跑 provision 版本，只需要额外带上：
+
+```bash
+PARTIAL_ROLLOUT=1
+OVERSAMPLING_BATCH_SIZE=<倍数后的 batch>
+```
+
+例如 `2.0x provision`：
+
+```bash
+cd /root/APRIL
+PARTIAL_ROLLOUT=1 \
+OVERSAMPLING_BATCH_SIZE=16 \
+INPUT_DATA=/root/math_level12/data/math-level2-train.shortprompt.parquet \
+EVAL_DATA=/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet \
+ROLL_OUT_BATCH_SIZE=8 \
+N_SAMPLES_PER_PROMPT=8 \
+NUM_ROLLOUT=30 \
+RUN_NAME=qwen2.5-3b-train-math-level2-shortprompt-prov20-bs8-n8-r30 \
+bash /root/APRIL/scripts/run-qwen2.5-3B.train-math-level4.sh
+```
+
+其他 provision 档位对应：
+
+- `3.0x`: `OVERSAMPLING_BATCH_SIZE=24`
+- `4.0x`: `OVERSAMPLING_BATCH_SIZE=32`
+- `5.0x`: `OVERSAMPLING_BATCH_SIZE=40`
+
+### 5.2 No-partial rollout smoke
 
 这是最推荐的第一步。先确认模型、数据、`torch_dist` 和 Ray/SGLang 都能正常起来。
 
@@ -222,7 +377,7 @@ bash /root/APRIL/scripts/run-qwen3-1.7B.no-partial-dapo-bench.sh
 - `${RUN_ROOT}/analysis/summary.json`
 - `${RUN_ROOT}/analysis/sample_records/`
 
-### 5.2 全量 no-partial rollout
+### 5.3 全量 no-partial rollout
 
 如果 smoke 没问题，可以跑完整个 `GSM8K`：
 
@@ -238,7 +393,7 @@ bash /root/APRIL/scripts/run-qwen3-1.7B.no-partial-dapo-bench.sh
 
 这个脚本会先把数据 pad 到 batch size 的整数倍，然后自动推导 `NUM_ROLLOUT`。
 
-### 5.3 Partial-rollout 对照 sweep
+### 5.4 Partial-rollout 对照 sweep
 
 如果你要比较不同 `over_sampling_batch_size` 的影响，直接用现成脚本：
 
@@ -270,10 +425,17 @@ RUN_MODE=train
 
 当前你主要会用到这几个：
 
+- `scripts/run-qwen2.5-3B.train-math-level4.sh`
+  - 当前 `Qwen2.5-3B` 的通用训练入口
+  - 虽然文件名里还是 `level4`，但现在已经支持通过 `INPUT_DATA/EVAL_DATA` 切到 `Level 2 shortprompt`
+- `scripts/lib/train_cleanup.sh`
+  - 所有主训练脚本启动前都会调用的清场脚本
 - `scripts/run-qwen3-1.7B.no-partial-dapo-bench.sh`
   - 当前最稳定的 `Qwen3-1.7B + GSM8K + no-partial` 启动脚本
 - `scripts/run-qwen3-1.7B.partial-rollout-sweep.sh`
   - 用于批量测试不同 `over_sampling_batch_size`
+- `scripts/run-qwen2.5-3B.no-partial-math-level-rollout.sh`
+  - 当前 `Qwen2.5-3B` 的单轮 rollout-only 测试入口
 - `scripts/analysis/prepare_gsm8k_dataset.py`
   - 生成 APRIL 可直接读取的 `GSM8K` parquet
 - `scripts/analysis/prepare_padded_dataset.py`
@@ -292,6 +454,10 @@ RUN_MODE=train
   - 聚合后的关键指标
 - `analysis/sample_records/rollout_*.jsonl`
   - sample rollout，方便检查输出质量
+- `analysis/eval_metrics.jsonl`
+  - eval 聚合指标
+- `analysis/eval_sample_records/<dataset>_rollout_<id>.jsonl`
+  - 每次 eval 的样本级记录
 - `debug_rollout/rollout_*.pkl`
   - 原始 debug rollout 数据
 
@@ -353,29 +519,46 @@ ray stop --force
 这意味着如果机器上已经有别的 Ray 任务，它会被停掉。  
 所以并发跑多个实验前，先确认你是否真的想重启 Ray。
 
+### 8.5 checkpoint 占空间很快
+
+当前大模型训练时，checkpoint 可能非常大，尤其是：
+
+- `Qwen2.5-3B`
+
+因此当前主训练脚本已经默认带：
+
+```text
+--keep-only-latest-checkpoint
+```
+
+它会在保存新 checkpoint 后，清掉更老 checkpoint 的大权重分片，避免磁盘线性膨胀。
+
 ## 9. 推荐工作流
 
 如果是在新环境第一次使用，我建议按这个顺序：
 
 1. 安装 APRIL 和依赖
 2. 准备 `Megatron-LM`
-3. 下载 `Qwen3-1.7B`
-4. 转成 `/root/Qwen3-1.7B_torch_dist`
-5. 生成 `/root/gsm8k/data/gsm8k-train.parquet`
-6. 跑一轮 no-partial smoke
-7. 确认 sample rollout 正常
-8. 再跑 full no-partial 或 partial-rollout sweep
+3. 下载 `Qwen2.5-3B`
+4. 转成 `/root/Qwen2.5-3B_torch_dist`
+5. 准备 `Level 2 shortprompt` 训练和 `subset64` eval
+6. 先跑一轮 rollout-only smoke
+7. 再跑 `Qwen2.5-3B + Level 2 shortprompt` 正式训练
+8. 之后再做 `non-provision / provision` 对照
 
 ## 10. 当前默认结论
 
 按我们已经验证过的配置：
 
-- `Qwen3-1.7B` 是当前建议保留的主模型
-- `GSM8K` 已经适配好，不需要再做额外格式修补
+- `Qwen2.5-3B` 是当前推荐继续推进的主模型
+- `Level 2 shortprompt` 是当前推荐的主训练数据集
+- `subset64 eval` 是当前推荐的快速评估配置
+- `Qwen3-1.7B + GSM8K` 仍然可用，但现在更偏历史基线
 - `0.6B` 这条线已经不再继续维护
 
-如果你后面继续沿用这套路径，最关键的是保证下面三项一直一致：
+如果你后面继续沿用当前主线，最关键的是保证下面四项一直一致：
 
-- `--hf-checkpoint /root/Qwen3-1.7B`
-- `--ref-load /root/Qwen3-1.7B_torch_dist`
-- `INPUT_DATA=/root/gsm8k/data/gsm8k-train.parquet`
+- `--hf-checkpoint /root/Qwen2.5-3B`
+- `--ref-load /root/Qwen2.5-3B_torch_dist`
+- `INPUT_DATA=/root/math_level12/data/math-level2-train.shortprompt.parquet`
+- `EVAL_DATA=/root/math_level12/data/math-level2-test.shortprompt.subset64.seed1234.parquet`
