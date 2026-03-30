@@ -662,6 +662,12 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                     "This is useful for debugging the rollout generation function."
                 ),
             )
+            parser.add_argument(
+                "--keep-only-latest-checkpoint",
+                action="store_true",
+                default=False,
+                help="After each save, delete older iter_* checkpoint weight shards under --save and keep only the latest checkpoint weights.",
+            )
             return parser
 
         def add_network_arguments(parser):

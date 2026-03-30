@@ -7,32 +7,26 @@ export PYTHONUNBUFFERED=1
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/lib/train_cleanup.sh"
 
-ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-128}
-N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-2}
-ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
-SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.72}
-RUN_NAME=${RUN_NAME:-qwen3-1.7b-no-partial-dapo-bs128-n2}
+ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-64}
+N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-1}
+ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-8192}
+SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.70}
+RUN_NAME=${RUN_NAME:-qwen2.5-1.5b-no-partial-math-level-bs64-n1}
 RUN_ROOT=${RUN_ROOT:-/root/APRIL/runs/${RUN_NAME}}
-INPUT_DATA=${INPUT_DATA:-/root/dapo-math-17k/data/train-00000-of-00001.parquet}
-PADDED_DATA=${PADDED_DATA:-${RUN_ROOT}/data/dapo_math_17k_padded_bs${ROLL_OUT_BATCH_SIZE}.parquet}
+INPUT_DATA=${INPUT_DATA:-/root/math_level12/data/math-level4-train.shortprompt.parquet}
 DEBUG_DIR=${DEBUG_DIR:-${RUN_ROOT}/debug_rollout}
 ANALYSIS_DIR=${ANALYSIS_DIR:-${RUN_ROOT}/analysis}
 JOB_LOG=${JOB_LOG:-${RUN_ROOT}/job_output.log}
 
 mkdir -p "${RUN_ROOT}" "${DEBUG_DIR}" "${ANALYSIS_DIR}"
 
-python /root/APRIL/scripts/analysis/prepare_padded_dataset.py \
-  --input "${INPUT_DATA}" \
-  --output "${PADDED_DATA}" \
-  --batch-size "${ROLL_OUT_BATCH_SIZE}" | tee "${RUN_ROOT}/dataset_prepare.log"
-
-NUM_ROWS=$(python - <<PY
+NUM_ROWS=$(python3 - <<PY
 import pandas as pd
-df = pd.read_parquet("${PADDED_DATA}")
+df = pd.read_parquet("${INPUT_DATA}")
 print(len(df))
 PY
 )
-NUM_ROLLOUT=${NUM_ROLLOUT:-$((NUM_ROWS / ROLL_OUT_BATCH_SIZE))}
+NUM_ROLLOUT=${NUM_ROLLOUT:-$(((NUM_ROWS + ROLL_OUT_BATCH_SIZE - 1) / ROLL_OUT_BATCH_SIZE))}
 
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l || true)
 if [ "${NVLINK_COUNT}" -gt 0 ]; then
@@ -41,17 +35,17 @@ else
   HAS_NVLINK=0
 fi
 
-source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
+source "${SCRIPT_DIR}/models/qwen2.5-1.5B.sh"
 
 CKPT_ARGS=(
-  --hf-checkpoint /root/Qwen3-1.7B
-  --ref-load /root/Qwen3-1.7B_torch_dist
-  --load /root/.slime-nonexistent-qwen3-1.7B-no-partial-bench-load
+  --hf-checkpoint /root/Qwen2.5-1.5B
+  --ref-load /root/Qwen2.5-1.5B_torch_dist
+  --load /root/.slime-nonexistent-qwen2.5-1.5B-no-partial-math-load
   --save "${RUN_ROOT}"
 )
 
 ROLLOUT_ARGS=(
-  --prompt-data "${PADDED_DATA}"
+  --prompt-data "${INPUT_DATA}"
   --input-key source_prompt
   --label-key answer
   --metadata-key metadata
@@ -63,7 +57,7 @@ ROLLOUT_ARGS=(
   --n-samples-per-prompt "${N_SAMPLES_PER_PROMPT}"
   --rollout-max-response-len "${ROLLOUT_MAX_RESPONSE_LEN}"
   --rollout-temperature 0.8
-  --global-batch-size $((ROLL_OUT_BATCH_SIZE * N_SAMPLES_PER_PROMPT))
+  --global-batch-size "$((ROLL_OUT_BATCH_SIZE * N_SAMPLES_PER_PROMPT))"
   --balance-data
   --save-debug-rollout-data "${DEBUG_DIR}/rollout_{rollout_id:06d}.pkl"
 )
@@ -130,7 +124,7 @@ ray job submit --address="http://127.0.0.1:8265" \
   "${SGLANG_ARGS[@]}" \
   "${MISC_ARGS[@]}" | tee "${JOB_LOG}"
 
-python /root/APRIL/scripts/analysis/analyze_rollout_debug_data.py \
+python3 /root/APRIL/scripts/analysis/analyze_rollout_debug_data.py \
   --debug-dir "${DEBUG_DIR}" \
   --output-dir "${ANALYSIS_DIR}" \
   --log-path "${JOB_LOG}" | tee "${ANALYSIS_DIR}/analysis_stdout.log"

@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import ray
 import torch
 import torch.distributed as dist
@@ -271,6 +274,33 @@ class MegatronTrainRayActor(TrainRayActor):
             save(iteration, self.model, self.optimizer, self.opt_param_scheduler)
         else:
             save(iteration, self.model, None, None)
+
+        if getattr(self.args, "keep_only_latest_checkpoint", False):
+            self._prune_older_checkpoint_weights(iteration)
+
+    def _prune_older_checkpoint_weights(self, iteration):
+        if dist.get_rank() == 0:
+            save_root = getattr(self.args, "save", None)
+            if save_root and os.path.isdir(save_root):
+                current_dir = f"iter_{iteration:07d}"
+                for entry in os.listdir(save_root):
+                    if not entry.startswith("iter_") or entry == current_dir:
+                        continue
+                    path = os.path.join(save_root, entry)
+                    if os.path.isdir(path):
+                        removed = False
+                        for filename in os.listdir(path):
+                            if not filename.endswith(".distcp"):
+                                continue
+                            shard_path = os.path.join(path, filename)
+                            if os.path.isfile(shard_path):
+                                print(f"Removing older checkpoint weight shard: {shard_path}")
+                                os.remove(shard_path)
+                                removed = True
+                        if removed:
+                            print(f"Preserved checkpoint metadata in: {path}")
+
+        dist.barrier(group=get_gloo_group())
 
     def connect_rollout_engines(self, rollout_engines, rollout_engine_lock):
         self.rollout_engines = rollout_engines

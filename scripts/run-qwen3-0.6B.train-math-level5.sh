@@ -7,32 +7,21 @@ export PYTHONUNBUFFERED=1
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/lib/train_cleanup.sh"
 
-ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-128}
-N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-2}
-ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
-SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.72}
-RUN_NAME=${RUN_NAME:-qwen3-1.7b-no-partial-dapo-bs128-n2}
+ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-36}
+N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
+ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-8192}
+SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.70}
+NUM_ROLLOUT=${NUM_ROLLOUT:-10}
+EVAL_INTERVAL=${EVAL_INTERVAL:-5}
+RUN_NAME=${RUN_NAME:-qwen3-0.6b-train-math-level5-bs36-n8-r10}
 RUN_ROOT=${RUN_ROOT:-/root/APRIL/runs/${RUN_NAME}}
-INPUT_DATA=${INPUT_DATA:-/root/dapo-math-17k/data/train-00000-of-00001.parquet}
-PADDED_DATA=${PADDED_DATA:-${RUN_ROOT}/data/dapo_math_17k_padded_bs${ROLL_OUT_BATCH_SIZE}.parquet}
+INPUT_DATA=${INPUT_DATA:-/root/math_level12/data/math-level5-train.parquet}
+EVAL_DATA=${EVAL_DATA:-/root/math_level12/data/math-level5-test.subset128.seed1234.parquet}
 DEBUG_DIR=${DEBUG_DIR:-${RUN_ROOT}/debug_rollout}
 ANALYSIS_DIR=${ANALYSIS_DIR:-${RUN_ROOT}/analysis}
 JOB_LOG=${JOB_LOG:-${RUN_ROOT}/job_output.log}
 
 mkdir -p "${RUN_ROOT}" "${DEBUG_DIR}" "${ANALYSIS_DIR}"
-
-python /root/APRIL/scripts/analysis/prepare_padded_dataset.py \
-  --input "${INPUT_DATA}" \
-  --output "${PADDED_DATA}" \
-  --batch-size "${ROLL_OUT_BATCH_SIZE}" | tee "${RUN_ROOT}/dataset_prepare.log"
-
-NUM_ROWS=$(python - <<PY
-import pandas as pd
-df = pd.read_parquet("${PADDED_DATA}")
-print(len(df))
-PY
-)
-NUM_ROLLOUT=${NUM_ROLLOUT:-$((NUM_ROWS / ROLL_OUT_BATCH_SIZE))}
 
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l || true)
 if [ "${NVLINK_COUNT}" -gt 0 ]; then
@@ -41,31 +30,37 @@ else
   HAS_NVLINK=0
 fi
 
-source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
+source "${SCRIPT_DIR}/models/qwen3-0.6B.sh"
 
 CKPT_ARGS=(
-  --hf-checkpoint /root/Qwen3-1.7B
-  --ref-load /root/Qwen3-1.7B_torch_dist
-  --load /root/.slime-nonexistent-qwen3-1.7B-no-partial-bench-load
+  --hf-checkpoint /root/Qwen3-0.6B
+  --ref-load /root/Qwen3-0.6B_torch_dist
+  --load /root/.slime-nonexistent-qwen3-0.6B-train-math-level5-load
   --save "${RUN_ROOT}"
 )
 
 ROLLOUT_ARGS=(
-  --prompt-data "${PADDED_DATA}"
+  --prompt-data "${INPUT_DATA}"
   --input-key source_prompt
   --label-key answer
   --metadata-key metadata
   --apply-chat-template
   --rm-type deepscaler
   --num-rollout "${NUM_ROLLOUT}"
-  --save-interval 1
+  --save-interval "${EVAL_INTERVAL}"
   --rollout-batch-size "${ROLL_OUT_BATCH_SIZE}"
   --n-samples-per-prompt "${N_SAMPLES_PER_PROMPT}"
   --rollout-max-response-len "${ROLLOUT_MAX_RESPONSE_LEN}"
   --rollout-temperature 0.8
-  --global-batch-size $((ROLL_OUT_BATCH_SIZE * N_SAMPLES_PER_PROMPT))
+  --global-batch-size "$((ROLL_OUT_BATCH_SIZE * N_SAMPLES_PER_PROMPT))"
   --balance-data
   --save-debug-rollout-data "${DEBUG_DIR}/rollout_{rollout_id:06d}.pkl"
+)
+
+EVAL_ARGS=(
+  --eval-prompt-data math_level5_test "${EVAL_DATA}"
+  --n-samples-per-eval-prompt 1
+  --eval-interval "${EVAL_INTERVAL}"
 )
 
 PERF_ARGS=(
@@ -79,6 +74,14 @@ PERF_ARGS=(
   --recompute-num-layers 1
   --use-dynamic-batch-size
   --max-tokens-per-gpu 2048
+)
+
+TRAIN_ARGS=(
+  --lr 1e-6
+  --min-lr 1e-7
+  --lr-decay-style cosine
+  --weight-decay 0.01
+  --clip-grad 1.0
 )
 
 GRPO_ARGS=(
@@ -118,19 +121,15 @@ RUNTIME_ENV_JSON="{
 ray job submit --address="http://127.0.0.1:8265" \
   --runtime-env-json="${RUNTIME_ENV_JSON}" \
   -- python3 train.py \
-  --debug-rollout-only \
   --actor-num-nodes 1 \
   --actor-num-gpus-per-node 1 \
   --colocate \
   "${MODEL_ARGS[@]}" \
   "${CKPT_ARGS[@]}" \
   "${ROLLOUT_ARGS[@]}" \
+  "${EVAL_ARGS[@]}" \
   "${GRPO_ARGS[@]}" \
+  "${TRAIN_ARGS[@]}" \
   "${PERF_ARGS[@]}" \
   "${SGLANG_ARGS[@]}" \
   "${MISC_ARGS[@]}" | tee "${JOB_LOG}"
-
-python /root/APRIL/scripts/analysis/analyze_rollout_debug_data.py \
-  --debug-dir "${DEBUG_DIR}" \
-  --output-dir "${ANALYSIS_DIR}" \
-  --log-path "${JOB_LOG}" | tee "${ANALYSIS_DIR}/analysis_stdout.log"

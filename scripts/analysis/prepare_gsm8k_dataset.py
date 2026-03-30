@@ -8,7 +8,8 @@ from datasets import load_dataset
 
 
 SYSTEM_SUFFIX = (
-    '\n\nRemember to put your answer on its own line after "Answer:".'
+    '\n\nRemember to put your final answer on its own line as '
+    '"Answer: \\\\boxed{$Answer}".'
 )
 
 
@@ -22,7 +23,7 @@ def build_prompt(question: str) -> list[dict[str, str]]:
     prompt = (
         "Solve the following math problem step by step. "
         "The last line of your response should be of the form "
-        "Answer: $Answer (without quotes) where $Answer is the answer "
+        "Answer: \\boxed{$Answer} (without quotes) where $Answer is the answer "
         f"to the problem.\n\n{question.strip()}{SYSTEM_SUFFIX}"
     )
     return [{"role": "user", "content": prompt}]

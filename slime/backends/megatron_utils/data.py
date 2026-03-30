@@ -19,6 +19,16 @@ from .cp_utils import slice_with_cp
 from ..utils.data import DataIterator, get_minimum_num_micro_batch_size
 
 
+def _append_analysis_jsonl(args, filename, record):
+    if not getattr(args, "save", None):
+        return
+    output_dir = os.path.join(args.save, "analysis")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, filename)
+    with open(output_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=True) + "\n")
+
+
 def get_batch(data_iterator, keys):
     """Generate a batch."""
 
@@ -211,6 +221,14 @@ def log_rollout_data(rollout_id, args, rollout_data):
                 f"rollout/{key}": sum([d[key] for d in gathered_log_dict]) / dp_size for key in log_dict
             }
             print(f"rollout {rollout_id}: {reduced_log_dict}")
+            _append_analysis_jsonl(
+                args,
+                "rollout_metrics.jsonl",
+                {
+                    "rollout_id": rollout_id,
+                    "metrics": reduced_log_dict,
+                },
+            )
             if args.use_wandb:
                 wandb = require_wandb(args)
                 reduced_log_dict["rollout/step"] = (
@@ -294,6 +312,14 @@ def log_partial_rollout_data(rollout_id, args, rollout_data):
                 f"partial_rollout/{key}": sum([d[key] for d in gathered_log_dict]) / dp_size for key in log_dict
             }
             print(f"partial_rollout {rollout_id}: {reduced_log_dict}")
+            _append_analysis_jsonl(
+                args,
+                "partial_rollout_metrics.jsonl",
+                {
+                    "rollout_id": rollout_id,
+                    "metrics": reduced_log_dict,
+                },
+            )
             if args.use_wandb:
                 wandb = require_wandb(args)
                 wandb.log(reduced_log_dict)
@@ -527,8 +553,28 @@ def log_eval_data(rollout_id, args, data_buffer):
             if "truncated" in data[key]:
                 truncated = data[key]["truncated"]
                 log_dict[f"eval/{key}-truncated_ratio"] = sum(truncated) / len(truncated)
+            if "records" in data[key] and getattr(args, "save", None):
+                output_dir = os.path.join(args.save, "analysis", "eval_sample_records")
+                os.makedirs(output_dir, exist_ok=True)
+                output_path = os.path.join(output_dir, f"{key}_rollout_{rollout_id:06d}.jsonl")
+                with open(output_path, "w", encoding="utf-8") as f:
+                    for record in data[key]["records"]:
+                        payload = {
+                            "rollout_id": rollout_id,
+                            "dataset": key,
+                            **record,
+                        }
+                        f.write(json.dumps(payload, ensure_ascii=True) + "\n")
 
         print(f"eval {rollout_id}: {log_dict}")
+        _append_analysis_jsonl(
+            args,
+            "eval_metrics.jsonl",
+            {
+                "rollout_id": rollout_id,
+                "metrics": log_dict,
+            },
+        )
         if args.use_wandb:
             wandb = require_wandb(args)
             log_dict["eval/step"] = (
@@ -568,6 +614,14 @@ def log_perf_data(rollout_id, args):
                 log_dict["perf/wait_time_ratio"] = log_dict["perf/train_wait_time"] / total_time
 
         print(f"perf {rollout_id}: {log_dict}")
+        _append_analysis_jsonl(
+            args,
+            "perf_metrics.jsonl",
+            {
+                "rollout_id": rollout_id,
+                "metrics": log_dict,
+            },
+        )
         if args.use_wandb:
             wandb = require_wandb(args)
             log_dict["rollout/step"] = (

@@ -4,6 +4,9 @@ set -euo pipefail
 
 export PYTHONUNBUFFERED=1
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${SCRIPT_DIR}/lib/train_cleanup.sh"
+
 N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
 ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-4096}
 SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.70}
@@ -25,7 +28,6 @@ WATCHDOG_FAULT_INJECT_GROUP=${WATCHDOG_FAULT_INJECT_GROUP:-}
 WATCHDOG_FAULT_INJECT_DELAY_SECONDS=${WATCHDOG_FAULT_INJECT_DELAY_SECONDS:-0}
 RUN_GROUPS=${RUN_GROUPS:-non,2p0x,3p0x}
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
 
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l || true)
@@ -52,6 +54,7 @@ COMMON_DATA_ARGS=(
    --rm-type deepscaler
    --num-rollout "${NUM_ROLLOUT}"
    --save-interval "${EVAL_INTERVAL}"
+   --keep-only-latest-checkpoint
    --n-samples-per-prompt "${N_SAMPLES_PER_PROMPT}"
    --rollout-max-response-len "${ROLLOUT_MAX_RESPONSE_LEN}"
    --rollout-temperature 0.8
@@ -122,8 +125,7 @@ RUNTIME_ENV_JSON="{
 }"
 
 start_ray_cluster() {
-    ray stop --force || true
-    ray start --head --node-ip-address "${MASTER_ADDR}" --num-gpus 1 --disable-usage-stats
+    start_fresh_ray_head "${MASTER_ADDR}" 1
 }
 
 cleanup_run_processes() {

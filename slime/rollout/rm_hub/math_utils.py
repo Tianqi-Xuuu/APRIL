@@ -478,7 +478,22 @@ def grade_answer_mathd(given_answer: str, ground_truth: str) -> bool:
 
 def extract_answer(passage: str) -> str:
     if "\\boxed" in passage:
-        return extract_boxed_answer(passage)
+        boxed = extract_boxed_answer(passage)
+        if boxed is not None:
+            return boxed
+
+    answer_matches = re.findall(r"Answer:\s*(.+)", passage, flags=re.IGNORECASE)
+    if answer_matches:
+        answer = answer_matches[-1].strip()
+        if "\\boxed" in answer:
+            boxed = extract_boxed_answer(answer)
+            if boxed is not None:
+                return boxed
+
+        answer = answer.splitlines()[0].strip()
+        answer = answer.rstrip(".。")
+        return answer if answer else None
+
     return None
 
 

@@ -1,9 +1,9 @@
 MODEL_ARGS=(
    --swiglu
-   --num-layers 36
-   --hidden-size 2048
-   --ffn-hidden-size 11008
-   --num-attention-heads 16
+   --num-layers 24
+   --hidden-size 896
+   --ffn-hidden-size 4864
+   --num-attention-heads 14
    --use-rotary-position-embeddings
    --disable-bias-linear
    --add-qkv-bias

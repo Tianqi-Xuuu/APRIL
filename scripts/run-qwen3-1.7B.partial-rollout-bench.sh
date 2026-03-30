@@ -4,6 +4,9 @@ set -ex
 
 export PYTHONBUFFERED=16
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${SCRIPT_DIR}/lib/train_cleanup.sh"
+
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l)
 if [ "$NVLINK_COUNT" -gt 0 ]; then
     HAS_NVLINK=1
@@ -17,7 +20,6 @@ N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
 ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
 SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.7}
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
 
 CKPT_ARGS=(
@@ -82,8 +84,7 @@ MISC_ARGS=(
 )
 
 export MASTER_ADDR=${MASTER_ADDR:-"127.0.0.1"}
-ray stop --force || true
-ray start --head --node-ip-address ${MASTER_ADDR} --num-gpus 1 --disable-usage-stats
+start_fresh_ray_head "${MASTER_ADDR}" 1
 
 RUNTIME_ENV_JSON="{
   \"env_vars\": {

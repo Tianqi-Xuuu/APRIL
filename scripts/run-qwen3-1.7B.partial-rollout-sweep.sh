@@ -4,6 +4,9 @@ set -euo pipefail
 
 export PYTHONUNBUFFERED=1
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${SCRIPT_DIR}/lib/train_cleanup.sh"
+
 ROLLOUT_BATCH_SIZE=${ROLLOUT_BATCH_SIZE:-32}
 N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
 ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
@@ -15,7 +18,6 @@ RUN_ROOT_BASE=${RUN_ROOT_BASE:-/root/APRIL/runs/partial-rollout-sweep-qwen3-1.7b
 OVER_SAMPLING_BATCH_SIZES=${OVER_SAMPLING_BATCH_SIZES:-"32 40 48 56 64 80 96"}
 FORCE_RAY_RESTART=${FORCE_RAY_RESTART:-1}
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
 
 NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l || true)
@@ -101,8 +103,7 @@ fi
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 
 if [ "${FORCE_RAY_RESTART}" = "1" ]; then
-    ray stop --force || true
-    ray start --head --node-ip-address "${MASTER_ADDR}" --num-gpus 1 --disable-usage-stats
+    start_fresh_ray_head "${MASTER_ADDR}" 1
 fi
 
 RUNTIME_ENV_JSON="{
