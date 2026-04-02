@@ -1,5 +1,7 @@
 # APRIL Setup Guide
 
+如果你的目标是先在另一台机器上尽量复现当前这套工作环境，先看 `/root/APRIL/ENVIRONMENT_REPRODUCTION_GUIDE.md`。
+
 这份文档面向之后在新环境里从零开始使用 APRIL 的场景。当前仓库里已经实际跑过两条主线：
 
 - `Qwen3-1.7B + GSM8K`
@@ -47,7 +49,7 @@
 
 ```bash
 cd /root
-git clone https://github.com/RLsys-Foundation/APRIL.git
+git clone https://github.com/Tianqi-Xuuu/APRIL
 cd /root/APRIL
 ```
 
