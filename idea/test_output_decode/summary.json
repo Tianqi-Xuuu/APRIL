@@ -1,0 +1,1146 @@
+[
+  {
+    "run_name": "qwen2.5-3b-train-math-level2-shortprompt-prov20-bs8-n8-r30",
+    "tail_label": "len4096",
+    "rollout_batch_size": 8,
+    "over_sampling_batch_size": 16,
+    "window_ratio": 2.0,
+    "rollout_max_response_len": 4096,
+    "n_samples_per_prompt": 8,
+    "partial_rollout_enabled": true,
+    "metric_source": "partial_log",
+    "num_rollouts": 30,
+    "rollout_time_mean": 17.715969689687093,
+    "tokens_throughput_mean": 1258.4314556595089,
+    "total_tokens_mean": 22741.466666666667,
+    "partial_samples_mean": 64.0,
+    "off_policy_ratio_mean": 0.23910471811147846,
+    "total_off_policy_tokens_mean": 6704.966666666666,
+    "response_length_mean_mean": 332.796875,
+    "response_length_p50_mean": 222.9,
+    "response_length_p90_mean": null,
+    "response_length_p99_mean": null,
+    "response_length_max_mean": 2656.266666666667,
+    "debug_num_rollouts": 30,
+    "debug_metric_rows": [
+      {
+        "rollout_time": 13.771568059921265,
+        "total_tokens": 13562.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 0.0,
+        "off_policy_ratio": 0.0,
+        "tokens_throughput": 984.7825564228114
+      },
+      {
+        "rollout_time": 13.042663335800171,
+        "total_tokens": 11955.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 5685.0,
+        "off_policy_ratio": 0.32227891156462585,
+        "tokens_throughput": 916.6072674118102
+      },
+      {
+        "rollout_time": 11.030080556869507,
+        "total_tokens": 10099.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7311.0,
+        "off_policy_ratio": 0.4199310740953475,
+        "tokens_throughput": 915.5871480657834
+      },
+      {
+        "rollout_time": 18.378174781799316,
+        "total_tokens": 14995.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 5405.0,
+        "off_policy_ratio": 0.26495098039215687,
+        "tokens_throughput": 815.9134504940165
+      },
+      {
+        "rollout_time": 28.970911741256714,
+        "total_tokens": 19011.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6810.0,
+        "off_policy_ratio": 0.26373881724177994,
+        "tokens_throughput": 656.2099311816595
+      },
+      {
+        "rollout_time": 13.606035470962524,
+        "total_tokens": 11249.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 10603.0,
+        "off_policy_ratio": 0.4852187442796998,
+        "tokens_throughput": 826.765447143452
+      },
+      {
+        "rollout_time": 17.394588947296143,
+        "total_tokens": 12999.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 4141.0,
+        "off_policy_ratio": 0.24159859976662776,
+        "tokens_throughput": 747.3013613248157
+      },
+      {
+        "rollout_time": 12.407769918441772,
+        "total_tokens": 8884.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 5644.0,
+        "off_policy_ratio": 0.38849118942731276,
+        "tokens_throughput": 716.0029609185158
+      },
+      {
+        "rollout_time": 13.89113187789917,
+        "total_tokens": 15189.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 3871.0,
+        "off_policy_ratio": 0.20309548793284365,
+        "tokens_throughput": 1093.4314160652193
+      },
+      {
+        "rollout_time": 10.488182783126831,
+        "total_tokens": 10107.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 4185.0,
+        "off_policy_ratio": 0.29282115869017633,
+        "tokens_throughput": 963.6559744420101
+      },
+      {
+        "rollout_time": 11.270879983901978,
+        "total_tokens": 14723.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 3953.0,
+        "off_policy_ratio": 0.21166202612979224,
+        "tokens_throughput": 1306.2866449672636
+      },
+      {
+        "rollout_time": 10.829982042312622,
+        "total_tokens": 12964.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 5295.0,
+        "off_policy_ratio": 0.28999397557368967,
+        "tokens_throughput": 1197.0472295660134
+      },
+      {
+        "rollout_time": 13.722386837005615,
+        "total_tokens": 18270.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 5525.0,
+        "off_policy_ratio": 0.23219163689850808,
+        "tokens_throughput": 1331.4010322701795
+      },
+      {
+        "rollout_time": 12.705976724624634,
+        "total_tokens": 15812.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6780.0,
+        "off_policy_ratio": 0.3001062322946176,
+        "tokens_throughput": 1244.4537199061433
+      },
+      {
+        "rollout_time": 22.773319959640503,
+        "total_tokens": 24022.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 3691.0,
+        "off_policy_ratio": 0.13318659113051637,
+        "tokens_throughput": 1054.8308302246858
+      },
+      {
+        "rollout_time": 22.933338403701782,
+        "total_tokens": 31845.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7992.0,
+        "off_policy_ratio": 0.20061751637924544,
+        "tokens_throughput": 1388.5898092734612
+      },
+      {
+        "rollout_time": 19.48025345802307,
+        "total_tokens": 28287.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 8880.0,
+        "off_policy_ratio": 0.23892162402130923,
+        "tokens_throughput": 1452.0858294248637
+      },
+      {
+        "rollout_time": 20.187252521514893,
+        "total_tokens": 30949.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6445.0,
+        "off_policy_ratio": 0.17235385355939456,
+        "tokens_throughput": 1533.096193601165
+      },
+      {
+        "rollout_time": 22.625609397888184,
+        "total_tokens": 33251.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6733.0,
+        "off_policy_ratio": 0.1683923569427771,
+        "tokens_throughput": 1469.6178748274317
+      },
+      {
+        "rollout_time": 19.7688570022583,
+        "total_tokens": 26438.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 8610.0,
+        "off_policy_ratio": 0.24566309061858024,
+        "tokens_throughput": 1337.3560240220186
+      },
+      {
+        "rollout_time": 20.584518671035767,
+        "total_tokens": 30709.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7351.0,
+        "off_policy_ratio": 0.19314240672622177,
+        "tokens_throughput": 1491.8493111626783
+      },
+      {
+        "rollout_time": 19.511146068572998,
+        "total_tokens": 27337.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7781.0,
+        "off_policy_ratio": 0.22156728743094709,
+        "tokens_throughput": 1401.09657853632
+      },
+      {
+        "rollout_time": 24.837594509124756,
+        "total_tokens": 34383.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6525.0,
+        "off_policy_ratio": 0.1595042534467586,
+        "tokens_throughput": 1384.3127999923054
+      },
+      {
+        "rollout_time": 19.93811321258545,
+        "total_tokens": 33114.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7793.0,
+        "off_policy_ratio": 0.1905052924927274,
+        "tokens_throughput": 1660.8392001253956
+      },
+      {
+        "rollout_time": 22.61730456352234,
+        "total_tokens": 34606.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 8317.0,
+        "off_policy_ratio": 0.19376558022505416,
+        "tokens_throughput": 1530.0673828221459
+      },
+      {
+        "rollout_time": 20.3373920917511,
+        "total_tokens": 31639.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 7821.0,
+        "off_policy_ratio": 0.19820070957932084,
+        "tokens_throughput": 1555.7058573322615
+      },
+      {
+        "rollout_time": 14.006938457489014,
+        "total_tokens": 22277.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 6904.0,
+        "off_policy_ratio": 0.23659230321099345,
+        "tokens_throughput": 1590.4260640260954
+      },
+      {
+        "rollout_time": 12.930706024169922,
+        "total_tokens": 23396.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 8443.0,
+        "off_policy_ratio": 0.2651779264424134,
+        "tokens_throughput": 1809.3366252599415
+      },
+      {
+        "rollout_time": 22.546130180358887,
+        "total_tokens": 37650.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 10100.0,
+        "off_policy_ratio": 0.21151832460732983,
+        "tokens_throughput": 1669.9096341064724
+      },
+      {
+        "rollout_time": 24.89028310775757,
+        "total_tokens": 42522.0,
+        "partial_samples": 64.0,
+        "total_off_policy_tokens": 12555.0,
+        "off_policy_ratio": 0.22795359224358624,
+        "tokens_throughput": 1708.377514868328
+      }
+    ],
+    "num_samples_non_padding": 1920,
+    "response_length_mean": 332.796875,
+    "response_length_p50": 249.0,
+    "response_length_p90": 617.0,
+    "response_length_p99": 4096.0,
+    "response_length_max": 4096.0,
+    "completion_tokens_mean": 232.71614583333334,
+    "completion_tokens_total": 446815.0,
+    "carryover_fraction": 0.39166666666666666,
+    "carryover_token_fraction": 0.4073162270738449,
+    "truncated_ratio": 0.0125,
+    "group_goodput": 0.4515699755716448,
+    "decode_event_count": 1077,
+    "decode_batches_per_rollout_proxy": 35.9,
+    "decode_throughput_mean": 776.0477715877437,
+    "running_req_mean": 18.015784586815226,
+    "running_req_p90": 56.0,
+    "queue_req_max": 0,
+    "token_usage_mean": 0.007929433611884865,
+    "mean_step_cost_sec_proxy": 0.4934810498520082
+  },
+  {
+    "run_name": "qwen2.5-3b-train-math-level2-shortprompt-prov30-bs8-n8-r30",
+    "tail_label": "len4096",
+    "rollout_batch_size": 8,
+    "over_sampling_batch_size": 24,
+    "window_ratio": 3.0,
+    "rollout_max_response_len": 4096,
+    "n_samples_per_prompt": 8,
+    "partial_rollout_enabled": true,
+    "metric_source": "partial_log",
+    "num_rollouts": 30,
+    "rollout_time_mean": 14.253175743420918,
+    "tokens_throughput_mean": 1474.3085837434144,
+    "total_tokens_mean": 22139.766666666666,
+    "partial_samples_mean": 127.73333333333333,
+    "off_policy_ratio_mean": 0.3294294592249654,
+    "total_off_policy_tokens_mean": 10277.733333333334,
+    "response_length_mean_mean": 290.76927083333334,
+    "response_length_p50_mean": 181.95,
+    "response_length_p90_mean": null,
+    "response_length_p99_mean": null,
+    "response_length_max_mean": 2401.8,
+    "debug_num_rollouts": 30,
+    "debug_metric_rows": [
+      {
+        "rollout_time": 14.969565391540527,
+        "total_tokens": 14895.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 0.0,
+        "off_policy_ratio": 0.0,
+        "tokens_throughput": 995.0188673090894
+      },
+      {
+        "rollout_time": 8.499987840652466,
+        "total_tokens": 8401.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 7135.0,
+        "off_policy_ratio": 0.4592559217301751,
+        "tokens_throughput": 988.3543550287164
+      },
+      {
+        "rollout_time": 10.18909239768982,
+        "total_tokens": 10419.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 6191.0,
+        "off_policy_ratio": 0.37272727272727274,
+        "tokens_throughput": 1022.5640904348171
+      },
+      {
+        "rollout_time": 7.084971189498901,
+        "total_tokens": 5221.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 6913.0,
+        "off_policy_ratio": 0.5697214438767101,
+        "tokens_throughput": 736.9119591817656
+      },
+      {
+        "rollout_time": 7.693707466125488,
+        "total_tokens": 7113.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 3500.0,
+        "off_policy_ratio": 0.3297842268915481,
+        "tokens_throughput": 924.5217642232595
+      },
+      {
+        "rollout_time": 10.50700330734253,
+        "total_tokens": 11264.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 4704.0,
+        "off_policy_ratio": 0.29458917835671344,
+        "tokens_throughput": 1072.0468691704384
+      },
+      {
+        "rollout_time": 10.98921513557434,
+        "total_tokens": 10406.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 5901.0,
+        "off_policy_ratio": 0.3618691359538848,
+        "tokens_throughput": 946.9284085915878
+      },
+      {
+        "rollout_time": 9.45401644706726,
+        "total_tokens": 10331.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 5909.0,
+        "off_policy_ratio": 0.36385467980295566,
+        "tokens_throughput": 1092.7630661362757
+      },
+      {
+        "rollout_time": 10.911627769470215,
+        "total_tokens": 9714.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 7560.0,
+        "off_policy_ratio": 0.43765196248697463,
+        "tokens_throughput": 890.2429779706129
+      },
+      {
+        "rollout_time": 11.465686321258545,
+        "total_tokens": 15003.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 5567.0,
+        "off_policy_ratio": 0.2706368497812348,
+        "tokens_throughput": 1308.5130344254158
+      },
+      {
+        "rollout_time": 10.904861688613892,
+        "total_tokens": 12107.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 8088.0,
+        "off_policy_ratio": 0.4004951720722951,
+        "tokens_throughput": 1110.2387490747635
+      },
+      {
+        "rollout_time": 31.006067991256714,
+        "total_tokens": 33716.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 7200.0,
+        "off_policy_ratio": 0.17597028057483624,
+        "tokens_throughput": 1087.4000537413337
+      },
+      {
+        "rollout_time": 11.773249864578247,
+        "total_tokens": 10869.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 19633.0,
+        "off_policy_ratio": 0.6436627106419252,
+        "tokens_throughput": 923.1945405916483
+      },
+      {
+        "rollout_time": 10.950978994369507,
+        "total_tokens": 13166.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 5265.0,
+        "off_policy_ratio": 0.28566002929846457,
+        "tokens_throughput": 1202.266939491835
+      },
+      {
+        "rollout_time": 18.043922901153564,
+        "total_tokens": 28586.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 8397.0,
+        "off_policy_ratio": 0.227050266338588,
+        "tokens_throughput": 1584.2452972447843
+      },
+      {
+        "rollout_time": 15.452922105789185,
+        "total_tokens": 20052.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 12480.0,
+        "off_policy_ratio": 0.38362227960162304,
+        "tokens_throughput": 1297.618655081931
+      },
+      {
+        "rollout_time": 12.383097171783447,
+        "total_tokens": 20662.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 8433.0,
+        "off_policy_ratio": 0.28984361574153633,
+        "tokens_throughput": 1668.5647954924514
+      },
+      {
+        "rollout_time": 13.553271293640137,
+        "total_tokens": 25964.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 10098.0,
+        "off_policy_ratio": 0.28001774721313294,
+        "tokens_throughput": 1915.69986591972
+      },
+      {
+        "rollout_time": 12.67586374282837,
+        "total_tokens": 21412.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 15505.0,
+        "off_policy_ratio": 0.41999620770918544,
+        "tokens_throughput": 1689.194553871272
+      },
+      {
+        "rollout_time": 14.751153230667114,
+        "total_tokens": 30164.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 12987.0,
+        "off_policy_ratio": 0.3009663738963176,
+        "tokens_throughput": 2044.8570717366108
+      },
+      {
+        "rollout_time": 14.105999231338501,
+        "total_tokens": 26222.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 12818.0,
+        "off_policy_ratio": 0.3283299180327869,
+        "tokens_throughput": 1858.9253813188977
+      },
+      {
+        "rollout_time": 14.657633066177368,
+        "total_tokens": 26956.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 9009.0,
+        "off_policy_ratio": 0.250493535381621,
+        "tokens_throughput": 1839.0418069750453
+      },
+      {
+        "rollout_time": 15.093652963638306,
+        "total_tokens": 32722.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 12690.0,
+        "off_policy_ratio": 0.2794415572976306,
+        "tokens_throughput": 2167.9311216992764
+      },
+      {
+        "rollout_time": 14.70871090888977,
+        "total_tokens": 30815.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 18481.0,
+        "off_policy_ratio": 0.3748985718922428,
+        "tokens_throughput": 2095.0170406419356
+      },
+      {
+        "rollout_time": 18.77850103378296,
+        "total_tokens": 38480.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 18631.0,
+        "off_policy_ratio": 0.3262243700863231,
+        "tokens_throughput": 2049.1518428853074
+      },
+      {
+        "rollout_time": 16.810613870620728,
+        "total_tokens": 30836.0,
+        "partial_samples": 120.0,
+        "total_off_policy_tokens": 13732.0,
+        "off_policy_ratio": 0.3081134446239454,
+        "tokens_throughput": 1834.317309131162
+      },
+      {
+        "rollout_time": 17.561338186264038,
+        "total_tokens": 34640.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 12801.0,
+        "off_policy_ratio": 0.26982989397356716,
+        "tokens_throughput": 1972.5148295984864
+      },
+      {
+        "rollout_time": 14.039807796478271,
+        "total_tokens": 27519.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 14775.0,
+        "off_policy_ratio": 0.34934033196198044,
+        "tokens_throughput": 1960.069567825767
+      },
+      {
+        "rollout_time": 26.053316593170166,
+        "total_tokens": 55659.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 14688.0,
+        "off_policy_ratio": 0.20879355196383642,
+        "tokens_throughput": 2136.349888543208
+      },
+      {
+        "rollout_time": 22.525436401367188,
+        "total_tokens": 40879.0,
+        "partial_samples": 128.0,
+        "total_off_policy_tokens": 19241.0,
+        "off_policy_ratio": 0.320043246839654,
+        "tokens_throughput": 1814.792808965017
+      }
+    ],
+    "num_samples_non_padding": 1920,
+    "response_length_mean": 290.76927083333334,
+    "response_length_p50": 203.0,
+    "response_length_p90": 574.3000000000004,
+    "response_length_p99": 4070.919999999993,
+    "response_length_max": 4096.0,
+    "completion_tokens_mean": 151.21302083333333,
+    "completion_tokens_total": 290329.0,
+    "carryover_fraction": 0.6708333333333333,
+    "carryover_token_fraction": 0.6346179678915989,
+    "truncated_ratio": 0.010416666666666666,
+    "group_goodput": 0.5612784227187191,
+    "decode_event_count": 581,
+    "decode_batches_per_rollout_proxy": 19.366666666666667,
+    "decode_throughput_mean": 1278.975421686747,
+    "running_req_mean": 30.2960413080895,
+    "running_req_p90": 74.0,
+    "queue_req_max": 0,
+    "token_usage_mean": 0.012839931153184166,
+    "mean_step_cost_sec_proxy": 0.735964324100908
+  },
+  {
+    "run_name": "qwen2.5-3b-train-math-level2-shortprompt-prov40-bs8-n8-r30",
+    "tail_label": "len4096",
+    "rollout_batch_size": 8,
+    "over_sampling_batch_size": 32,
+    "window_ratio": 4.0,
+    "rollout_max_response_len": 4096,
+    "n_samples_per_prompt": 8,
+    "partial_rollout_enabled": true,
+    "metric_source": "partial_log",
+    "num_rollouts": 30,
+    "rollout_time_mean": 13.236502210299173,
+    "tokens_throughput_mean": 1713.633488080048,
+    "total_tokens_mean": 24020.133333333335,
+    "partial_samples_mean": 191.46666666666667,
+    "off_policy_ratio_mean": 0.3810432853811372,
+    "total_off_policy_tokens_mean": 14347.466666666667,
+    "response_length_mean_mean": 319.9546875,
+    "response_length_p50_mean": 212.18333333333334,
+    "response_length_p90_mean": null,
+    "response_length_p99_mean": null,
+    "response_length_max_mean": 2298.633333333333,
+    "debug_num_rollouts": 30,
+    "debug_metric_rows": [
+      {
+        "rollout_time": 17.409072875976562,
+        "total_tokens": 22398.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 0.0,
+        "off_policy_ratio": 0.0,
+        "tokens_throughput": 1286.570523287765
+      },
+      {
+        "rollout_time": 6.507084369659424,
+        "total_tokens": 3899.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 12798.0,
+        "off_policy_ratio": 0.766484997304905,
+        "tokens_throughput": 599.1930914834705
+      },
+      {
+        "rollout_time": 8.778554916381836,
+        "total_tokens": 10217.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 3001.0,
+        "off_policy_ratio": 0.2270388863670752,
+        "tokens_throughput": 1163.8589833201195
+      },
+      {
+        "rollout_time": 8.187544345855713,
+        "total_tokens": 8545.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 7536.0,
+        "off_policy_ratio": 0.4686275729121323,
+        "tokens_throughput": 1043.6584693828522
+      },
+      {
+        "rollout_time": 8.565038442611694,
+        "total_tokens": 8003.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 6119.0,
+        "off_policy_ratio": 0.4332955672001133,
+        "tokens_throughput": 934.3799276118234
+      },
+      {
+        "rollout_time": 7.453359127044678,
+        "total_tokens": 6731.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 5218.0,
+        "off_policy_ratio": 0.4366892626998075,
+        "tokens_throughput": 903.0827423270695
+      },
+      {
+        "rollout_time": 11.79636836051941,
+        "total_tokens": 17890.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 5429.0,
+        "off_policy_ratio": 0.23281444315793987,
+        "tokens_throughput": 1516.5684432062174
+      },
+      {
+        "rollout_time": 9.887367725372314,
+        "total_tokens": 11392.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 10745.0,
+        "off_policy_ratio": 0.48538645706283595,
+        "tokens_throughput": 1152.1772342669724
+      },
+      {
+        "rollout_time": 11.200952768325806,
+        "total_tokens": 15349.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 8289.0,
+        "off_policy_ratio": 0.35066418478720707,
+        "tokens_throughput": 1370.3298565282853
+      },
+      {
+        "rollout_time": 12.515085697174072,
+        "total_tokens": 15894.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 9521.0,
+        "off_policy_ratio": 0.374621286641747,
+        "tokens_throughput": 1269.9873084839437
+      },
+      {
+        "rollout_time": 12.926011085510254,
+        "total_tokens": 18931.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 9803.0,
+        "off_policy_ratio": 0.34116377810259624,
+        "tokens_throughput": 1464.5662822633035
+      },
+      {
+        "rollout_time": 16.648435354232788,
+        "total_tokens": 24507.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 12540.0,
+        "off_policy_ratio": 0.33848894647339867,
+        "tokens_throughput": 1472.0302225739915
+      },
+      {
+        "rollout_time": 16.29373335838318,
+        "total_tokens": 25800.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 13419.0,
+        "off_policy_ratio": 0.34215558785282646,
+        "tokens_throughput": 1583.4308462354834
+      },
+      {
+        "rollout_time": 20.115459203720093,
+        "total_tokens": 41245.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 17641.0,
+        "off_policy_ratio": 0.2995788472642054,
+        "tokens_throughput": 2050.4130471141457
+      },
+      {
+        "rollout_time": 18.86050057411194,
+        "total_tokens": 34324.0,
+        "partial_samples": 184.0,
+        "total_off_policy_tokens": 19934.0,
+        "off_policy_ratio": 0.36739282686424124,
+        "tokens_throughput": 1819.8880705803415
+      },
+      {
+        "rollout_time": 12.123024463653564,
+        "total_tokens": 22642.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 15263.0,
+        "off_policy_ratio": 0.40266455612716,
+        "tokens_throughput": 1867.6857468929243
+      },
+      {
+        "rollout_time": 16.54957151412964,
+        "total_tokens": 37152.0,
+        "partial_samples": 184.0,
+        "total_off_policy_tokens": 17263.0,
+        "off_policy_ratio": 0.3172470826058991,
+        "tokens_throughput": 2244.891957974893
+      },
+      {
+        "rollout_time": 15.649235010147095,
+        "total_tokens": 32826.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 17000.0,
+        "off_policy_ratio": 0.34118733191506445,
+        "tokens_throughput": 2097.6105208155764
+      },
+      {
+        "rollout_time": 13.382279872894287,
+        "total_tokens": 25429.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 18354.0,
+        "off_policy_ratio": 0.4192038005618619,
+        "tokens_throughput": 1900.1993861678427
+      },
+      {
+        "rollout_time": 15.650300741195679,
+        "total_tokens": 34787.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 17325.0,
+        "off_policy_ratio": 0.3324570156585815,
+        "tokens_throughput": 2222.768787339117
+      },
+      {
+        "rollout_time": 9.003684997558594,
+        "total_tokens": 10403.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 18659.0,
+        "off_policy_ratio": 0.6420411533961875,
+        "tokens_throughput": 1155.4158106176349
+      },
+      {
+        "rollout_time": 14.276735544204712,
+        "total_tokens": 34309.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 8774.0,
+        "off_policy_ratio": 0.2036534131792122,
+        "tokens_throughput": 2403.140402353876
+      },
+      {
+        "rollout_time": 13.053981065750122,
+        "total_tokens": 29323.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 23408.0,
+        "off_policy_ratio": 0.44391344749767686,
+        "tokens_throughput": 2246.287921845933
+      },
+      {
+        "rollout_time": 17.224260091781616,
+        "total_tokens": 44826.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 23661.0,
+        "off_policy_ratio": 0.3454816242498576,
+        "tokens_throughput": 2602.492052554889
+      },
+      {
+        "rollout_time": 11.1358962059021,
+        "total_tokens": 17119.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 26412.0,
+        "off_policy_ratio": 0.6067400243504629,
+        "tokens_throughput": 1537.2808513540936
+      },
+      {
+        "rollout_time": 15.269462585449219,
+        "total_tokens": 37140.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 13260.0,
+        "off_policy_ratio": 0.2630952380952381,
+        "tokens_throughput": 2432.3056422032787
+      },
+      {
+        "rollout_time": 14.280819177627563,
+        "total_tokens": 32306.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 23383.0,
+        "off_policy_ratio": 0.4198854351846864,
+        "tokens_throughput": 2262.195158286915
+      },
+      {
+        "rollout_time": 13.111093759536743,
+        "total_tokens": 26956.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 21126.0,
+        "off_policy_ratio": 0.43937440206314216,
+        "tokens_throughput": 2055.968822615791
+      },
+      {
+        "rollout_time": 16.143062829971313,
+        "total_tokens": 42619.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 21485.0,
+        "off_policy_ratio": 0.33515849244976914,
+        "tokens_throughput": 2640.0814051763023
+      },
+      {
+        "rollout_time": 13.097090244293213,
+        "total_tokens": 27642.0,
+        "partial_samples": 192.0,
+        "total_off_policy_tokens": 23058.0,
+        "off_policy_ratio": 0.45479289940828405,
+        "tokens_throughput": 2110.5451275365863
+      }
+    ],
+    "num_samples_non_padding": 1920,
+    "response_length_mean": 319.9546875,
+    "response_length_p50": 235.0,
+    "response_length_p90": 616.0,
+    "response_length_p99": 4096.0,
+    "response_length_max": 4096.0,
+    "completion_tokens_mean": 127.8375,
+    "completion_tokens_total": 245448.0,
+    "carryover_fraction": 0.8083333333333333,
+    "carryover_token_fraction": 0.7798596851471595,
+    "truncated_ratio": 0.011979166666666667,
+    "group_goodput": 0.6043892769326393,
+    "decode_event_count": 604,
+    "decode_batches_per_rollout_proxy": 20.133333333333333,
+    "decode_throughput_mean": 1282.0964569536425,
+    "running_req_mean": 31.692052980132452,
+    "running_req_p90": 95.0,
+    "queue_req_max": 0,
+    "token_usage_mean": 0.013079470198675497,
+    "mean_step_cost_sec_proxy": 0.657442162763204
+  },
+  {
+    "run_name": "qwen2.5-3b-train-math-level2-shortprompt-prov50-bs8-n8-r30",
+    "tail_label": "len4096",
+    "rollout_batch_size": 8,
+    "over_sampling_batch_size": 40,
+    "window_ratio": 5.0,
+    "rollout_max_response_len": 4096,
+    "n_samples_per_prompt": 8,
+    "partial_rollout_enabled": true,
+    "metric_source": "partial_log",
+    "num_rollouts": 30,
+    "rollout_time_mean": 12.788418038686116,
+    "tokens_throughput_mean": 1605.7170262858244,
+    "total_tokens_mean": 21742.6,
+    "partial_samples_mean": 254.93333333333334,
+    "off_policy_ratio_mean": 0.4118928885126418,
+    "total_off_policy_tokens_mean": 14557.566666666668,
+    "response_length_mean_mean": 267.91770833333334,
+    "response_length_p50_mean": 154.88333333333333,
+    "response_length_p90_mean": null,
+    "response_length_p99_mean": null,
+    "response_length_max_mean": 2128.8,
+    "debug_num_rollouts": 30,
+    "debug_metric_rows": [
+      {
+        "rollout_time": 18.95079278945923,
+        "total_tokens": 26182.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 0.0,
+        "off_policy_ratio": 0.0,
+        "tokens_throughput": 1381.5780844040942
+      },
+      {
+        "rollout_time": 8.465836524963379,
+        "total_tokens": 7736.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 17008.0,
+        "off_policy_ratio": 0.6873585515680569,
+        "tokens_throughput": 913.790382933654
+      },
+      {
+        "rollout_time": 8.458426475524902,
+        "total_tokens": 9606.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 5888.0,
+        "off_policy_ratio": 0.38001807151155287,
+        "tokens_throughput": 1135.672223172441
+      },
+      {
+        "rollout_time": 8.94465947151184,
+        "total_tokens": 9431.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 7638.0,
+        "off_policy_ratio": 0.44747788388306287,
+        "tokens_throughput": 1054.372168111835
+      },
+      {
+        "rollout_time": 9.52145791053772,
+        "total_tokens": 11494.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 7458.0,
+        "off_policy_ratio": 0.3935204727733221,
+        "tokens_throughput": 1207.1680732085367
+      },
+      {
+        "rollout_time": 8.113877296447754,
+        "total_tokens": 8449.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 8164.0,
+        "off_policy_ratio": 0.49142238006380545,
+        "tokens_throughput": 1041.3024120661723
+      },
+      {
+        "rollout_time": 8.623124599456787,
+        "total_tokens": 8593.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 7131.0,
+        "off_policy_ratio": 0.4535105571101501,
+        "tokens_throughput": 996.5065332050652
+      },
+      {
+        "rollout_time": 11.603683471679688,
+        "total_tokens": 19539.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 6372.0,
+        "off_policy_ratio": 0.24591872177839527,
+        "tokens_throughput": 1683.8618571152422
+      },
+      {
+        "rollout_time": 9.396775484085083,
+        "total_tokens": 9259.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 13940.0,
+        "off_policy_ratio": 0.6008879693090219,
+        "tokens_throughput": 985.3380040505994
+      },
+      {
+        "rollout_time": 10.940429925918579,
+        "total_tokens": 16380.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 7631.0,
+        "off_policy_ratio": 0.31781266919328643,
+        "tokens_throughput": 1497.1989319354564
+      },
+      {
+        "rollout_time": 11.48403549194336,
+        "total_tokens": 16040.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 12449.0,
+        "off_policy_ratio": 0.43697567482186106,
+        "tokens_throughput": 1396.721562838506
+      },
+      {
+        "rollout_time": 9.94431185722351,
+        "total_tokens": 12295.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 11596.0,
+        "off_policy_ratio": 0.4853710602318865,
+        "tokens_throughput": 1236.3851995519387
+      },
+      {
+        "rollout_time": 17.008700370788574,
+        "total_tokens": 31188.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 10140.0,
+        "off_policy_ratio": 0.2453542392566783,
+        "tokens_throughput": 1833.6497980506215
+      },
+      {
+        "rollout_time": 14.372538805007935,
+        "total_tokens": 22780.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 20251.0,
+        "off_policy_ratio": 0.4706142083614139,
+        "tokens_throughput": 1584.967020027289
+      },
+      {
+        "rollout_time": 13.263543844223022,
+        "total_tokens": 19585.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 14760.0,
+        "off_policy_ratio": 0.4297568787305285,
+        "tokens_throughput": 1476.603857160717
+      },
+      {
+        "rollout_time": 17.299895763397217,
+        "total_tokens": 33521.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 15132.0,
+        "off_policy_ratio": 0.31101884775861716,
+        "tokens_throughput": 1937.6417325544285
+      },
+      {
+        "rollout_time": 18.260602951049805,
+        "total_tokens": 32686.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 23257.0,
+        "off_policy_ratio": 0.41572672184187476,
+        "tokens_throughput": 1789.9737532007878
+      },
+      {
+        "rollout_time": 10.487065553665161,
+        "total_tokens": 11548.0,
+        "partial_samples": 240.0,
+        "total_off_policy_tokens": 19967.0,
+        "off_policy_ratio": 0.633571315246708,
+        "tokens_throughput": 1101.1659973808448
+      },
+      {
+        "rollout_time": 15.26952576637268,
+        "total_tokens": 37067.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 9586.0,
+        "off_policy_ratio": 0.20547446037768202,
+        "tokens_throughput": 2427.5148139591092
+      },
+      {
+        "rollout_time": 13.253886938095093,
+        "total_tokens": 22090.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 23458.0,
+        "off_policy_ratio": 0.5150171247914288,
+        "tokens_throughput": 1666.6808841191814
+      },
+      {
+        "rollout_time": 15.010287761688232,
+        "total_tokens": 30638.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 16798.0,
+        "off_policy_ratio": 0.3541192343367906,
+        "tokens_throughput": 2041.1334203864785
+      },
+      {
+        "rollout_time": 12.239498376846313,
+        "total_tokens": 20416.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 21580.0,
+        "off_policy_ratio": 0.5138584627107343,
+        "tokens_throughput": 1668.0422163886492
+      },
+      {
+        "rollout_time": 15.380976438522339,
+        "total_tokens": 34586.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 16767.0,
+        "off_policy_ratio": 0.3265047806359901,
+        "tokens_throughput": 2248.6218698949324
+      },
+      {
+        "rollout_time": 13.450515031814575,
+        "total_tokens": 22977.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 23940.0,
+        "off_policy_ratio": 0.5102628045271437,
+        "tokens_throughput": 1708.2617242278366
+      },
+      {
+        "rollout_time": 10.478809595108032,
+        "total_tokens": 15333.0,
+        "partial_samples": 240.0,
+        "total_off_policy_tokens": 14757.0,
+        "off_policy_ratio": 0.49042871385842474,
+        "tokens_throughput": 1463.2387258146305
+      },
+      {
+        "rollout_time": 15.760078191757202,
+        "total_tokens": 39443.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 13153.0,
+        "off_policy_ratio": 0.2500760514107537,
+        "tokens_throughput": 2502.7160094059295
+      },
+      {
+        "rollout_time": 11.835735559463501,
+        "total_tokens": 21242.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 26522.0,
+        "off_policy_ratio": 0.5552717527845239,
+        "tokens_throughput": 1794.7342514775544
+      },
+      {
+        "rollout_time": 19.06670570373535,
+        "total_tokens": 48339.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 18762.0,
+        "off_policy_ratio": 0.27960835158939507,
+        "tokens_throughput": 2535.257047080237
+      },
+      {
+        "rollout_time": 11.09982442855835,
+        "total_tokens": 16190.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 28613.0,
+        "off_policy_ratio": 0.6386402696248019,
+        "tokens_throughput": 1458.5816293044525
+      },
+      {
+        "rollout_time": 15.666938781738281,
+        "total_tokens": 37645.0,
+        "partial_samples": 256.0,
+        "total_off_policy_tokens": 14009.0,
+        "off_policy_ratio": 0.27120842529136174,
+        "tokens_throughput": 2402.8306055475123
+      }
+    ],
+    "num_samples_non_padding": 1920,
+    "response_length_mean": 267.91770833333334,
+    "response_length_p50": 152.5,
+    "response_length_p90": 552.1000000000001,
+    "response_length_p99": 4096.0,
+    "response_length_max": 4096.0,
+    "completion_tokens_mean": 86.43958333333333,
+    "completion_tokens_total": 165964.0,
+    "carryover_fraction": 0.8583333333333333,
+    "carryover_token_fraction": 0.8670073027885565,
+    "truncated_ratio": 0.011458333333333333,
+    "group_goodput": 0.6255660376286794,
+    "decode_event_count": 709,
+    "decode_batches_per_rollout_proxy": 23.633333333333333,
+    "decode_throughput_mean": 937.6595345557123,
+    "running_req_mean": 24.324400564174894,
+    "running_req_p90": 86.0,
+    "queue_req_max": 0,
+    "token_usage_mean": 0.010479548660084626,
+    "mean_step_cost_sec_proxy": 0.5411178295635874
+  }
+]
