@@ -7,7 +7,13 @@ from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 
 def _fetch_requirements(path):
     with open(path, "r") as fd:
-        return [r.strip() for r in fd.readlines()]
+        requirements = []
+        for line in fd.readlines():
+            line = line.strip()
+            if not line or line.startswith("#") or line.startswith("-e "):
+                continue
+            requirements.append(line)
+        return requirements
 
 
 # Custom wheel class to modify the wheel name

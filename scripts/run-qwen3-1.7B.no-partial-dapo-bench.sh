@@ -6,13 +6,19 @@ export PYTHONUNBUFFERED=1
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/lib/train_cleanup.sh"
+APRIL_ROOT=${APRIL_ROOT:-$(cd -- "${SCRIPT_DIR}/.." &>/dev/null && pwd)}
+MEGATRON_ROOT=${MEGATRON_ROOT:-/root/Megatron-LM}
+SGLANG_PYTHON_ROOT=${SGLANG_PYTHON_ROOT:-}
+QWEN3_HF_CHECKPOINT=${QWEN3_HF_CHECKPOINT:-/root/Qwen3-1.7B}
+QWEN3_REF_LOAD=${QWEN3_REF_LOAD:-/root/Qwen3-1.7B_torch_dist}
 
 ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-128}
 N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-2}
 ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-256}
 SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.72}
+DEBUG_ROLLOUT_ONLY=${DEBUG_ROLLOUT_ONLY:-1}
 RUN_NAME=${RUN_NAME:-qwen3-1.7b-no-partial-dapo-bs128-n2}
-RUN_ROOT=${RUN_ROOT:-/root/APRIL/runs/${RUN_NAME}}
+RUN_ROOT=${RUN_ROOT:-${APRIL_ROOT}/runs/${RUN_NAME}}
 INPUT_DATA=${INPUT_DATA:-/root/dapo-math-17k/data/train-00000-of-00001.parquet}
 PADDED_DATA=${PADDED_DATA:-${RUN_ROOT}/data/dapo_math_17k_padded_bs${ROLL_OUT_BATCH_SIZE}.parquet}
 DEBUG_DIR=${DEBUG_DIR:-${RUN_ROOT}/debug_rollout}
@@ -21,7 +27,7 @@ JOB_LOG=${JOB_LOG:-${RUN_ROOT}/job_output.log}
 
 mkdir -p "${RUN_ROOT}" "${DEBUG_DIR}" "${ANALYSIS_DIR}"
 
-python /root/APRIL/scripts/analysis/prepare_padded_dataset.py \
+python "${APRIL_ROOT}/scripts/analysis/prepare_padded_dataset.py" \
   --input "${INPUT_DATA}" \
   --output "${PADDED_DATA}" \
   --batch-size "${ROLL_OUT_BATCH_SIZE}" | tee "${RUN_ROOT}/dataset_prepare.log"
@@ -44,8 +50,8 @@ fi
 source "${SCRIPT_DIR}/models/qwen3-1.7B.sh"
 
 CKPT_ARGS=(
-  --hf-checkpoint /root/Qwen3-1.7B
-  --ref-load /root/Qwen3-1.7B_torch_dist
+  --hf-checkpoint "${QWEN3_HF_CHECKPOINT}"
+  --ref-load "${QWEN3_REF_LOAD}"
   --load /root/.slime-nonexistent-qwen3-1.7B-no-partial-bench-load
   --save "${RUN_ROOT}"
 )
@@ -90,6 +96,15 @@ GRPO_ARGS=(
   --eps-clip-high 0.28
 )
 
+OPTIMIZER_ARGS=(
+  --optimizer adam
+  --lr 1e-6
+  --lr-decay-style constant
+  --weight-decay 0.1
+  --adam-beta1 0.9
+  --adam-beta2 0.98
+)
+
 SGLANG_ARGS=(
   --rollout-num-gpus-per-engine 1
   --sglang-mem-fraction-static "${SGLANG_MEM_FRACTION}"
@@ -97,6 +112,7 @@ SGLANG_ARGS=(
 )
 
 MISC_ARGS=(
+  --no-gradient-accumulation-fusion
   --attention-dropout 0.0
   --hidden-dropout 0.0
   --accumulate-allreduce-grads-in-fp32
@@ -104,12 +120,23 @@ MISC_ARGS=(
   --attention-backend flash
 )
 
+DEBUG_ARGS=()
+if [ "${DEBUG_ROLLOUT_ONLY}" = "1" ]; then
+  DEBUG_ARGS+=(--debug-rollout-only)
+fi
+
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 start_fresh_ray_head "${MASTER_ADDR}" 1
 
+RUNTIME_PYTHONPATH="${MEGATRON_ROOT}"
+if [ -n "${SGLANG_PYTHON_ROOT}" ]; then
+  RUNTIME_PYTHONPATH="${RUNTIME_PYTHONPATH}:${SGLANG_PYTHON_ROOT}"
+fi
+
 RUNTIME_ENV_JSON="{
+  \"working_dir\": \"${APRIL_ROOT}\",
   \"env_vars\": {
-    \"PYTHONPATH\": \"/root/Megatron-LM/\",
+    \"PYTHONPATH\": \"${RUNTIME_PYTHONPATH}\",
     \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
     \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\"
   }
@@ -118,19 +145,20 @@ RUNTIME_ENV_JSON="{
 ray job submit --address="http://127.0.0.1:8265" \
   --runtime-env-json="${RUNTIME_ENV_JSON}" \
   -- python3 train.py \
-  --debug-rollout-only \
+  "${DEBUG_ARGS[@]}" \
   --actor-num-nodes 1 \
   --actor-num-gpus-per-node 1 \
   --colocate \
   "${MODEL_ARGS[@]}" \
   "${CKPT_ARGS[@]}" \
   "${ROLLOUT_ARGS[@]}" \
+  "${OPTIMIZER_ARGS[@]}" \
   "${GRPO_ARGS[@]}" \
   "${PERF_ARGS[@]}" \
   "${SGLANG_ARGS[@]}" \
   "${MISC_ARGS[@]}" | tee "${JOB_LOG}"
 
-python /root/APRIL/scripts/analysis/analyze_rollout_debug_data.py \
+python "${APRIL_ROOT}/scripts/analysis/analyze_rollout_debug_data.py" \
   --debug-dir "${DEBUG_DIR}" \
   --output-dir "${ANALYSIS_DIR}" \
   --log-path "${JOB_LOG}" | tee "${ANALYSIS_DIR}/analysis_stdout.log"

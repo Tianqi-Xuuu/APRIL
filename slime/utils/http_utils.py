@@ -41,7 +41,14 @@ def get_host_info():
 
 def run_router(args):
     try:
-        from sglang_router.launch_router import launch_router
+        try:
+            from sglang_router.launch_router import launch_router
+        except ModuleNotFoundError as exc:
+            print(f"Falling back to simple Python router because sglang-router is unavailable: {exc}", flush=True)
+            from slime.utils.simple_router import launch_simple_router
+
+            launch_simple_router(args)
+            return 0
 
         router = launch_router(args)
         if router is None:

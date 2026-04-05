@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import random
 import time
 
@@ -57,6 +58,10 @@ class RolloutRayActor(RayActor):
 
     def continue_generation(self):
         self.infer_engine.continue_generation()
+
+    def get_server_url(self):
+        server_args = self.infer_engine.llm.server_args
+        return f"http://{server_args.host}:{server_args.port}"
 
 
 def create_rollout_engines(args, pg):
@@ -163,6 +168,11 @@ class RolloutGroup:
         nodes_per_engine = max(1, args.rollout_num_gpus_per_engine // 8)
         # when doing multi-node serving, we will only send request to node-0 for each engine.
         self.rollout_engines = self.all_rollout_engines[::nodes_per_engine]
+        if os.getenv("SLIME_SGLANG_DIRECT", "0") == "1":
+            worker_urls = ray.get([engine.get_server_url.remote() for engine in self.rollout_engines])
+            self.args.sglang_worker_urls = worker_urls
+            ray.get(self.data_buffer.set_sglang_worker_urls.remote(worker_urls))
+            print(f"SGLang direct worker mode enabled: {worker_urls}", flush=True)
         self.rollout_engine_lock = Lock.options(
             num_cpus=1,
             num_gpus=0,
@@ -172,7 +182,16 @@ class RolloutGroup:
         if self.args.sglang_router_ip is not None:
             return
 
-        from sglang_router.launch_router import RouterArgs
+        if os.getenv("SLIME_SGLANG_DIRECT", "0") == "1":
+            print("SLIME_SGLANG_DIRECT=1, skipping router launch", flush=True)
+            return
+
+        try:
+            from sglang_router.launch_router import RouterArgs
+        except ModuleNotFoundError:
+            from slime.utils.simple_router import RouterArgs
+
+            print("sglang-router unavailable, using simple Python router fallback", flush=True)
 
         self.args.sglang_router_ip = get_host_info()[1]
         self.args.sglang_router_port = find_available_port(random.randint(3000, 4000))

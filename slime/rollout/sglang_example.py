@@ -17,6 +17,31 @@ from .rm_hub import async_rm, batched_async_rm
 __all__ = ["generate_rollout"]
 
 
+def _get_worker_urls(args) -> list[str] | None:
+    worker_urls = getattr(args, "sglang_worker_urls", None)
+    if worker_urls:
+        return worker_urls
+    return None
+
+
+def _get_generate_url(args, sample: Sample) -> str:
+    worker_urls = _get_worker_urls(args)
+    if worker_urls:
+        sample_index = getattr(sample, "index", 0) or 0
+        return f"{worker_urls[sample_index % len(worker_urls)]}/generate"
+    return f"http://{args.sglang_router_ip}:{args.sglang_router_port}/generate"
+
+
+async def _list_worker_urls(args) -> list[str]:
+    worker_urls = _get_worker_urls(args)
+    if worker_urls:
+        return worker_urls
+    response = await get(
+        f"http://{args.sglang_router_ip}:{args.sglang_router_port}/list_workers", use_http2=args.use_http2
+    )
+    return response["urls"]
+
+
 class GenerateState(metaclass=SingletonMeta):
     """
     The global state for the generation process.
@@ -71,7 +96,7 @@ class GenerateState(metaclass=SingletonMeta):
 async def generate(args, sample: Sample, sampling_params, evaluation=False) -> Sample:
     state = GenerateState(args)
 
-    url = f"http://{args.sglang_router_ip}:{args.sglang_router_port}/generate"
+    url = _get_generate_url(args, sample)
 
     assert (
         sample.status == Sample.Status.PENDING or sample.status == Sample.Status.ABORTED
@@ -175,12 +200,10 @@ async def abort(args, rollout_id: int, data_buffer):
     state = GenerateState(args)
     assert not state.aborted
     state.aborted = True
-    response = await get(
-        f"http://{args.sglang_router_ip}:{args.sglang_router_port}/list_workers", use_http2=args.use_http2
-    )
+    worker_urls = await _list_worker_urls(args)
 
     # abort all the requests
-    for url in response["urls"]:
+    for url in worker_urls:
         print(f"Abort request for {url}", flush=True)
         # await post(f"{url}/abort_request", {"abort_all": True}, use_http2=False)
         # based on https://github.com/THUDM/slime/pull/63/files

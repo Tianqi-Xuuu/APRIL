@@ -77,6 +77,10 @@ class Buffer:
         self._init_wandb()  # Now initialize wandb with the correct run_id
         return True
 
+    def set_sglang_worker_urls(self, urls):
+        self.args.sglang_worker_urls = urls
+        return True
+
     def _init_wandb(self):
         """Initialize wandb for buffer process if use_wandb is enabled"""
         if not hasattr(self.args, "use_wandb") or not self.args.use_wandb:

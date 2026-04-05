@@ -56,13 +56,14 @@ def main() -> None:
     parser.add_argument("--dataset", default="SuperSecureHuman/competition_math_hf_dataset")
     parser.add_argument("--levels", nargs="+", default=["1", "2"])
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--streaming", action="store_true")
     args = parser.parse_args()
 
     levels = normalize_levels(args.levels)
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    dataset = load_dataset(args.dataset, split=args.split)
+    dataset = load_dataset(args.dataset, split=args.split, streaming=args.streaming)
     records = []
     for idx, sample in enumerate(dataset):
         if sample["level"] not in levels:

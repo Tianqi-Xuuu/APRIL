@@ -6,6 +6,13 @@ export PYTHONUNBUFFERED=1
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/lib/train_cleanup.sh"
+APRIL_ROOT=${APRIL_ROOT:-$(cd -- "${SCRIPT_DIR}/.." &>/dev/null && pwd)}
+MEGATRON_ROOT=${MEGATRON_ROOT:-/root/Megatron-LM}
+SGLANG_PYTHON_ROOT=${SGLANG_PYTHON_ROOT:-}
+QWEN25_HF_CHECKPOINT=${QWEN25_HF_CHECKPOINT:-/root/Qwen2.5-3B}
+QWEN25_REF_LOAD=${QWEN25_REF_LOAD:-/root/Qwen2.5-3B_torch_dist}
+SLIME_SGLANG_DIRECT=${SLIME_SGLANG_DIRECT:-0}
+DEBUG_ROLLOUT_ONLY=${DEBUG_ROLLOUT_ONLY:-0}
 
 ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-16}
 N_SAMPLES_PER_PROMPT=${N_SAMPLES_PER_PROMPT:-8}
@@ -28,7 +35,7 @@ if [ -z "${PROVISION_TAG}" ] && [ "${PARTIAL_ROLLOUT}" = "1" ]; then
   fi
 fi
 RUN_NAME=${RUN_NAME:-qwen2.5-3b-train-${TRAIN_DATA_TAG}${PROVISION_TAG}-bs${ROLL_OUT_BATCH_SIZE}-n${N_SAMPLES_PER_PROMPT}-r${NUM_ROLLOUT}}
-RUN_ROOT=${RUN_ROOT:-/root/APRIL/runs/${RUN_NAME}}
+RUN_ROOT=${RUN_ROOT:-${APRIL_ROOT}/runs/${RUN_NAME}}
 DEBUG_DIR=${DEBUG_DIR:-${RUN_ROOT}/debug_rollout}
 ANALYSIS_DIR=${ANALYSIS_DIR:-${RUN_ROOT}/analysis}
 JOB_LOG=${JOB_LOG:-${RUN_ROOT}/job_output.log}
@@ -50,8 +57,8 @@ fi
 source "${SCRIPT_DIR}/models/qwen2.5-3B.sh"
 
 CKPT_ARGS=(
-  --hf-checkpoint /root/Qwen2.5-3B
-  --ref-load /root/Qwen2.5-3B_torch_dist
+  --hf-checkpoint "${QWEN25_HF_CHECKPOINT}"
+  --ref-load "${QWEN25_REF_LOAD}"
   --load "${LOAD_PATH}"
   --save "${RUN_ROOT}"
 )
@@ -101,10 +108,13 @@ PERF_ARGS=(
 )
 
 TRAIN_ARGS=(
+  --optimizer adam
   --lr 1e-6
   --min-lr 1e-7
   --lr-decay-style cosine
   --weight-decay 0.01
+  --adam-beta1 0.9
+  --adam-beta2 0.98
   --clip-grad 1.0
 )
 
@@ -124,6 +134,7 @@ SGLANG_ARGS=(
 )
 
 MISC_ARGS=(
+  --no-gradient-accumulation-fusion
   --attention-dropout 0.0
   --hidden-dropout 0.0
   --accumulate-allreduce-grads-in-fp32
@@ -131,20 +142,33 @@ MISC_ARGS=(
   --attention-backend flash
 )
 
+DEBUG_ARGS=()
+if [ "${DEBUG_ROLLOUT_ONLY}" = "1" ]; then
+  DEBUG_ARGS+=(--debug-rollout-only)
+fi
+
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 start_fresh_ray_head "${MASTER_ADDR}" 1
 
+RUNTIME_PYTHONPATH="${MEGATRON_ROOT}"
+if [ -n "${SGLANG_PYTHON_ROOT}" ]; then
+  RUNTIME_PYTHONPATH="${RUNTIME_PYTHONPATH}:${SGLANG_PYTHON_ROOT}"
+fi
+
 RUNTIME_ENV_JSON="{
+  \"working_dir\": \"${APRIL_ROOT}\",
   \"env_vars\": {
-    \"PYTHONPATH\": \"/root/Megatron-LM/\",
+    \"PYTHONPATH\": \"${RUNTIME_PYTHONPATH}\",
     \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
-    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\"
+    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\",
+    \"SLIME_SGLANG_DIRECT\": \"${SLIME_SGLANG_DIRECT}\"
   }
 }"
 
 ray job submit --address="http://127.0.0.1:8265" \
   --runtime-env-json="${RUNTIME_ENV_JSON}" \
   -- python3 train.py \
+  "${DEBUG_ARGS[@]}" \
   --actor-num-nodes 1 \
   --actor-num-gpus-per-node 1 \
   --colocate \
