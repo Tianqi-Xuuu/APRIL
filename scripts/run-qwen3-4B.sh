@@ -101,6 +101,8 @@ SGLANG_ARGS=(
    --sglang-disable-cuda-graph
 )
 
+read -r -a EXTRA_ALGO_ARGS_ARR <<< "${EXTRA_ALGO_ARGS:-}"
+
 MISC_ARGS=(
    # default dropout in megatron is 0.1
    --attention-dropout 0.0
@@ -141,4 +143,5 @@ ray job submit --address="http://127.0.0.1:8265" \
    ${PERF_ARGS[@]} \
    ${EVAL_ARGS[@]} \
    ${SGLANG_ARGS[@]} \
-   ${MISC_ARGS[@]}
+   ${MISC_ARGS[@]} \
+   ${EXTRA_ALGO_ARGS_ARR[@]}
