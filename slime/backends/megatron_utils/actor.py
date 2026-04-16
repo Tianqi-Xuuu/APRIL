@@ -21,6 +21,7 @@ from slime.utils.timer import Timer, timer
 from ..utils.data import process_rollout_data
 from .checkpoint import load_checkpoint
 from .data import get_data_iterator, log_eval_data, log_perf_data, log_rollout_data
+from .hf_export import export_hf_checkpoint
 from .initialize import get_gloo_group, init
 from .loss import compute_advantages_and_returns
 from .model import forward_only, initialize_model_and_optimizer, save, train
@@ -268,6 +269,10 @@ class MegatronTrainRayActor(TrainRayActor):
 
     def save_model(self, iteration, with_optimizer=True):
         if self.args.debug_rollout_only:
+            return
+
+        if getattr(self.args, "save_hf_weights", False):
+            export_hf_checkpoint(self.args, self.model, iteration, cpu_state_dict=self.weights["actor"])
             return
 
         if with_optimizer:

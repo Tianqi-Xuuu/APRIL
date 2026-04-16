@@ -229,6 +229,10 @@ def compute_advantages_and_returns(args, rollout_data):
 def policy_loss_function(args, batch, logits, sum_of_sample_mean):
     advantages = torch.cat(batch["advantages"], dim=0)
     old_log_probs = batch["log_probs"]
+    old_log_probs_source = "rollout_recomputed"
+    if getattr(args, "use_behavior_logprobs_for_ppo_clip", False) and batch.get("behavior_log_probs") is not None:
+        old_log_probs = batch["behavior_log_probs"]
+        old_log_probs_source = "behavior"
     sample_metadata = batch.get("sample_metadata")
 
     response_lengths = batch["response_lengths"]
@@ -267,13 +271,14 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         log_probs = torch.cat(log_probs, dim=0)
         assert ppo_kl.shape == log_probs.shape, f"{ppo_kl.shape} vs {log_probs.shape}"
     else:
-        old_log_probs = torch.cat(batch["log_probs"], dim=0)
+        old_log_probs = torch.cat(old_log_probs, dim=0)
         log_probs = torch.cat(log_probs, dim=0)
         ppo_kl = old_log_probs - log_probs
 
     pg_loss, pg_clipfrac = compute_policy_loss(ppo_kl, advantages, args.eps_clip, args.eps_clip_high)
     pg_loss = sum_of_sample_mean(pg_loss)
     pg_clipfrac = sum_of_sample_mean(pg_clipfrac)
+    ppo_kl_abs = sum_of_sample_mean(torch.abs(ppo_kl))
     ppo_kl = sum_of_sample_mean(ppo_kl)
 
     # entropy loss
@@ -346,7 +351,12 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
             "entropy_loss": entropy_loss.clone().detach(),
             "pg_clipfrac": pg_clipfrac.clone().detach(),
             "ppo_kl": ppo_kl.clone().detach(),
+            "ppo_kl_abs": ppo_kl_abs.clone().detach(),
             "kl_loss": kl_loss.clone().detach(),
+            "old_log_probs_is_behavior": 1.0 if old_log_probs_source == "behavior" else 0.0,
+            "old_log_probs_behavior_sample_frac": (
+                float(len(response_lengths)) if old_log_probs_source == "behavior" else 0.0
+            ),
         },
     )
 

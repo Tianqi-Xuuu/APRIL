@@ -17,6 +17,82 @@ from .rm_hub import async_rm, batched_async_rm
 __all__ = ["generate_rollout"]
 
 
+def _extract_behavior_logprobs_from_output(output):
+    def _extract_float_list(obj):
+        if obj is None:
+            return None
+        if isinstance(obj, (int, float)):
+            return [float(obj)]
+        if isinstance(obj, dict):
+            for k in ("token_logprobs", "output_token_logprobs", "logprobs", "values"):
+                if k in obj:
+                    return _extract_float_list(obj[k])
+            return None
+        if isinstance(obj, list):
+            vals = []
+            for x in obj:
+                if isinstance(x, (int, float)):
+                    vals.append(float(x))
+                    continue
+                if isinstance(x, dict):
+                    found = None
+                    for k in ("logprob", "value"):
+                        if k in x and isinstance(x[k], (int, float)):
+                            found = float(x[k])
+                            break
+                    if found is not None:
+                        vals.append(found)
+                        continue
+                    nested = _extract_float_list(x)
+                    if nested is None or len(nested) == 0:
+                        return None
+                    vals.extend(nested)
+                    continue
+                if isinstance(x, (tuple, list)):
+                    found = None
+                    for y in x:
+                        if isinstance(y, (int, float)):
+                            found = float(y)
+                            break
+                    if found is None:
+                        return None
+                    vals.append(found)
+                    continue
+                return None
+            return vals
+        return None
+
+    for src in (
+        output.get("meta_info", {}).get("output_token_logprobs"),
+        output.get("meta_info", {}).get("token_logprobs"),
+        output.get("meta_info", {}).get("logprobs"),
+        output.get("output_token_logprobs"),
+        output.get("token_logprobs"),
+        output.get("logprobs"),
+    ):
+        vals = _extract_float_list(src)
+        if vals:
+            return vals
+    return None
+
+
+def _merge_behavior_logprobs(behavior_lp, existing, target_total, old_response_len):
+    if not behavior_lp:
+        return None
+
+    new_target = max(target_total - old_response_len, 0)
+    if len(behavior_lp) == target_total:
+        return behavior_lp
+    if len(behavior_lp) > target_total:
+        return behavior_lp[-target_total:]
+    if len(behavior_lp) == new_target:
+        if old_response_len == 0:
+            return behavior_lp
+        if isinstance(existing, list) and len(existing) == old_response_len:
+            return existing + behavior_lp
+    return None
+
+
 def _get_worker_urls(args) -> list[str] | None:
     worker_urls = getattr(args, "sglang_worker_urls", None)
     if worker_urls:
@@ -67,6 +143,7 @@ class GenerateState(metaclass=SingletonMeta):
             no_stop_trim=True,
             spaces_between_special_tokens=False,
         )
+        self.request_behavior_logprob = bool(getattr(args, "use_behavior_logprobs_for_ppo_clip", False))
         self.reset()
 
     def reset(self):
@@ -102,9 +179,11 @@ async def generate(args, sample: Sample, sampling_params, evaluation=False) -> S
         sample.status == Sample.Status.PENDING or sample.status == Sample.Status.ABORTED
     ), f"Sample status is {sample.status}"
 
+    old_response_len = 0
     if len(sample.response) > 0:
         response_token_ids = state.tokenizer(sample.response, add_special_tokens=False)["input_ids"]
-        sampling_params["max_new_tokens"] -= len(response_token_ids)
+        old_response_len = len(response_token_ids)
+        sampling_params["max_new_tokens"] -= old_response_len
         state.total_off_policy_tokens += sample.completion_tokens
 
     if sampling_params["max_new_tokens"] < 0:
@@ -121,8 +200,42 @@ async def generate(args, sample: Sample, sampling_params, evaluation=False) -> S
         "text": input_text,
         "sampling_params": sampling_params,
     }
+    if state.request_behavior_logprob:
+        # sglang 0.4.9 expects logprob controls at the top-level request object.
+        payload["return_logprob"] = True
+        payload["logprob_start_len"] = -1
+        payload["top_logprobs_num"] = 0
 
-    output = await post(url, payload, use_http2=args.use_http2)
+    try:
+        output = await post(url, payload, use_http2=args.use_http2, max_retries=3)
+    except Exception as exc:
+        exc_msg = str(exc)
+        print(
+            "[generate] request failed:",
+            {
+                "url": url,
+                "use_behavior_logprobs_for_ppo_clip": bool(getattr(args, "use_behavior_logprobs_for_ppo_clip", False)),
+                "max_new_tokens": sampling_params.get("max_new_tokens"),
+                "temperature": sampling_params.get("temperature"),
+                "top_p": sampling_params.get("top_p"),
+                "top_k": sampling_params.get("top_k"),
+                "logprob_request_fields": {
+                    "return_logprob": payload.get("return_logprob"),
+                    "logprob_start_len": payload.get("logprob_start_len"),
+                    "top_logprobs_num": payload.get("top_logprobs_num"),
+                },
+                "sampling_params_has_logprob_fields": {
+                    "return_logprob": "return_logprob" in sampling_params,
+                    "logprob_start_len": "logprob_start_len" in sampling_params,
+                    "top_logprobs_num": "top_logprobs_num" in sampling_params,
+                },
+                "input_text_chars": len(input_text),
+                "sample_index": sample.index,
+                "error": exc_msg[:1000],
+            },
+            flush=True,
+        )
+        raise
     sample.response += output["text"]
     sample.completion_tokens = output["meta_info"]["completion_tokens"]
     if not evaluation:
@@ -131,6 +244,19 @@ async def generate(args, sample: Sample, sampling_params, evaluation=False) -> S
     response_token_ids = state.tokenizer(sample.response, add_special_tokens=False)["input_ids"]
     sample.tokens = prompt_tokens_ids + response_token_ids
     sample.response_length = len(response_token_ids)
+
+    # Optional behavior log_probs for PPO clip.
+    behavior_lp = _extract_behavior_logprobs_from_output(output)
+    if behavior_lp:
+        target_total = sample.response_length
+        final_lp = _merge_behavior_logprobs(
+            behavior_lp=behavior_lp,
+            existing=sample.metadata.get("behavior_log_probs"),
+            target_total=target_total,
+            old_response_len=old_response_len,
+        )
+        if isinstance(final_lp, list) and len(final_lp) == target_total:
+            sample.metadata["behavior_log_probs"] = final_lp
 
     match output["meta_info"]["finish_reason"]["type"]:
         case "length":

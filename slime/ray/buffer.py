@@ -240,6 +240,18 @@ class Buffer:
             "truncated": [1 if sample.status == Sample.Status.TRUNCATED else 0 for sample in samples],
         }
 
+        # Optional behavior policy log_probs (response-token level) for PPO ratio clip.
+        behavior_log_probs = []
+        has_behavior_log_probs = True
+        for sample in samples:
+            vals = sample.metadata.get("behavior_log_probs") if sample.metadata else None
+            if not isinstance(vals, list) or len(vals) != sample.response_length:
+                has_behavior_log_probs = False
+                break
+            behavior_log_probs.append(vals)
+        if has_behavior_log_probs and behavior_log_probs:
+            train_data["behavior_log_probs"] = behavior_log_probs
+
         # loss mask
         # TODO: compress the loss mask
         loss_masks = []

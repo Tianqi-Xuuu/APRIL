@@ -79,7 +79,6 @@ def terminate_process(process: multiprocessing.Process, timeout: float = 1.0) ->
 async def post(url, payload, use_http2=False, max_retries=60):
     # never timeout
     timeout = httpx.Timeout(None)
-    max_retries = 60
     retry_count = 0
     while retry_count < max_retries:
         try:
@@ -91,11 +90,25 @@ async def post(url, payload, use_http2=False, max_retries=60):
                 except:
                     output = response.text
         except Exception as e:
+            err_msg = str(e)
+            if isinstance(e, httpx.HTTPStatusError):
+                status = e.response.status_code if e.response is not None else "unknown"
+                body = ""
+                if e.response is not None:
+                    try:
+                        body = e.response.text
+                    except Exception:
+                        body = ""
+                if body:
+                    body = body[:1000]
+                    err_msg = f"HTTP {status} for {url}; response_body={body}"
+                else:
+                    err_msg = f"HTTP {status} for {url}; {e}"
             retry_count += 1
-            print(f"Error: {e}, retrying... (attempt {retry_count}/{max_retries})")
+            print(f"Error: {err_msg}, retrying... (attempt {retry_count}/{max_retries})")
             if retry_count >= max_retries:
                 print(f"Max retries ({max_retries}) reached, failing...")
-                raise e
+                raise RuntimeError(err_msg) from e
             await asyncio.sleep(1)
             continue
         break

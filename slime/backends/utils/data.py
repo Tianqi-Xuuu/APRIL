@@ -145,6 +145,7 @@ def process_rollout_data(rollout_id, args, data_buffer, dp_rank, dp_size, rollou
         "rewards",
         "truncated",
         "loss_masks",
+        "behavior_log_probs",
         "round_number",
         "sample_indices",
         "sample_metadata",
@@ -159,6 +160,8 @@ def process_rollout_data(rollout_id, args, data_buffer, dp_rank, dp_size, rollou
             val = [torch.tensor(t, dtype=torch.long, device=torch.cuda.current_device()) for t in val]
         elif key == "loss_masks":
             val = [torch.tensor(t, dtype=torch.int, device=torch.cuda.current_device()) for t in val]
+        elif key == "behavior_log_probs":
+            val = [torch.tensor(t, dtype=torch.float32, device=torch.cuda.current_device()) for t in val]
 
         # save the data to local storage
         rollout_data[key] = val
