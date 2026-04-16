@@ -61,6 +61,9 @@ LOAD_PATH=${LOAD_PATH:-/root/.slime-nonexistent-${MODEL_TAG}-idea-rollout-window
 
 RUN_ROOT_BASE_PARENT=${RUN_ROOT_BASE_PARENT:-${REPO_ROOT}/runs/idea-rollout-window-${MODEL_TAG}-${TASK_TAG:-sweep}-bs${ROLLOUT_BATCH_SIZE:-8}-allckpts}
 INCLUDE_BASE_HF=${INCLUDE_BASE_HF:-0}
+# When 1, skip checkpoints whose run_status.csv already has 7 succeeded and 0 failed;
+# otherwise re-run that checkpoint's sweep with RESUME_FAILED_WINDOW_SWEEP=1 (only re-run failed/missing windows).
+RESUME_ONLY_FAILED_CKPTS=${RESUME_ONLY_FAILED_CKPTS:-0}
 
 CKPT_PATHS_FILE="$(mktemp)"
 cleanup() {
@@ -149,6 +152,23 @@ PY
 
     export HF_CHECKPOINT="${ckpt_path}"
     export RUN_ROOT_BASE="${RUN_ROOT_BASE_PARENT}/${slug}"
+    if [ "${RESUME_ONLY_FAILED_CKPTS}" = "1" ]; then
+        local rs="${RUN_ROOT_BASE}/run_status.csv"
+        if [ -f "${rs}" ]; then
+            local ok bad
+            ok="$(grep -c ',succeeded,0' "${rs}" 2>/dev/null || true)"
+            bad="$(grep -c ',failed,' "${rs}" 2>/dev/null || true)"
+            ok="${ok:-0}"
+            bad="${bad:-0}"
+            if [ "${ok}" -eq 7 ] && [ "${bad}" -eq 0 ] 2>/dev/null; then
+                echo "Skip checkpoint ${slug} (7/7 windows already succeeded)."
+                return
+            fi
+        fi
+        export RESUME_FAILED_WINDOW_SWEEP=1
+    else
+        export RESUME_FAILED_WINDOW_SWEEP=0
+    fi
     echo ""
     echo "=============================="
     echo "Checkpoint: ${ckpt_path}"

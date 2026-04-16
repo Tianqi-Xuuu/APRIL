@@ -35,6 +35,8 @@ FORCE_RAY_RESTART=${FORCE_RAY_RESTART:-1}
 RUN_ANALYSIS=${RUN_ANALYSIS:-1}
 DRY_RUN=${DRY_RUN:-0}
 INCLUDE_BASELINE=${INCLUDE_BASELINE:-1}
+# When 1, keep existing run_status.csv and skip window jobs that already succeeded; re-run others.
+RESUME_FAILED_WINDOW_SWEEP=${RESUME_FAILED_WINDOW_SWEEP:-0}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-/root/APRIL/runs/idea-rollout-window-${MODEL_TAG}-${TASK_TAG}-bs${ROLLOUT_BATCH_SIZE}-len${ROLLOUT_MAX_RESPONSE_LEN}}
 EXTRA_TRAIN_ARGS=${EXTRA_TRAIN_ARGS:-}
 
@@ -162,6 +164,20 @@ run_job() {
     local run_root="${RUN_ROOT_BASE}/${run_name}"
     mkdir -p "${run_root}" "${run_root}/debug_rollout"
 
+    if [ "${RESUME_FAILED_WINDOW_SWEEP:-0}" = "1" ] && [ -f "${RUN_ROOT_BASE}/run_status.csv" ]; then
+        if awk -F"," -v r="${run_name}" '
+            NR > 1 && $1 == r && $2 == "succeeded" && ($3 == 0 || $3 == "0") { found = 1 }
+            END { exit(found ? 0 : 1) }
+        ' "${RUN_ROOT_BASE}/run_status.csv" 2>/dev/null; then
+            echo "=== Skip ${run_name} (already succeeded) ==="
+            return
+        fi
+        local tmp_status
+        tmp_status="$(mktemp)"
+        awk -F"," -v r="${run_name}" 'NR==1 || $1!=r' "${RUN_ROOT_BASE}/run_status.csv" >"${tmp_status}"
+        mv "${tmp_status}" "${RUN_ROOT_BASE}/run_status.csv"
+    fi
+
     local train_args=(
         python3 train.py
         --debug-rollout-only
@@ -205,7 +221,7 @@ run_job() {
     fi
 
     set +e
-    (cd "${REPO_ROOT}" && "${cmd[@]}") | tee "${run_root}/job_output.log"
+    (cd "${REPO_ROOT}" && "${cmd[@]}") 2>&1 | tee "${run_root}/job_output.log"
     local rc=${PIPESTATUS[0]}
     set -e
 
@@ -218,7 +234,9 @@ run_job() {
     fi
 }
 
-echo "run_name,status,exit_code" > "${RUN_ROOT_BASE}/run_status.csv"
+if [ "${RESUME_FAILED_WINDOW_SWEEP:-0}" != "1" ] || [ ! -f "${RUN_ROOT_BASE}/run_status.csv" ]; then
+    echo "run_name,status,exit_code" >"${RUN_ROOT_BASE}/run_status.csv"
+fi
 
 for OVER_BS in ${BATCH_SIZES}; do
     if [ "${OVER_BS}" -lt "${ROLLOUT_BATCH_SIZE}" ]; then
