@@ -9,6 +9,13 @@ REPO_ROOT="$(cd -- "${IDEA_DIR}/.." &>/dev/null && pwd)"
 source "${IDEA_DIR}/lib.sh"
 source "${REPO_ROOT}/scripts/lib/train_cleanup.sh"
 
+MEGATRON_ROOT=${MEGATRON_ROOT:-/root/Megatron-LM}
+SGLANG_PYTHON_ROOT=${SGLANG_PYTHON_ROOT:-}
+RUNTIME_PYTHONPATH="${MEGATRON_ROOT}"
+if [ -n "${SGLANG_PYTHON_ROOT}" ]; then
+    RUNTIME_PYTHONPATH="${RUNTIME_PYTHONPATH}:${SGLANG_PYTHON_ROOT}"
+fi
+
 MODEL_TAG=${MODEL_TAG:-qwen3-1.7b}
 MODEL_SCRIPT=${MODEL_SCRIPT:-${REPO_ROOT}/scripts/models/qwen3-1.7B.sh}
 HF_CHECKPOINT=${HF_CHECKPOINT:-/root/Qwen3-1.7B}
@@ -54,11 +61,13 @@ if [ "${INCLUDE_BASELINE}" = "1" ]; then
     BATCH_SIZES=$(ensure_baseline_batch_size "${ROLLOUT_BATCH_SIZE}" ${BATCH_SIZES})
 fi
 
-NVLINK_COUNT=$(nvidia-smi | grep -o "NVLink" | wc -l || true)
-if [ "${NVLINK_COUNT}" -gt 0 ]; then
-    HAS_NVLINK=1
-else
-    HAS_NVLINK=0
+HAS_NVLINK=0
+if command -v nvidia-smi >/dev/null 2>&1; then
+    NVLINK_COUNT="$(nvidia-smi 2>/dev/null | grep -c NVLink || true)"
+    NVLINK_COUNT="${NVLINK_COUNT:-0}"
+    if [ "${NVLINK_COUNT}" -gt 0 ] 2>/dev/null; then
+        HAS_NVLINK=1
+    fi
 fi
 
 mkdir -p "${RUN_ROOT_BASE}"
@@ -125,15 +134,23 @@ COMMON_MISC_ARGS=(
 
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 
-if [ "${FORCE_RAY_RESTART}" = "1" ] && [ "${DRY_RUN}" != "1" ]; then
-    start_fresh_ray_head "${MASTER_ADDR}" 1
+if [ "${DRY_RUN}" != "1" ]; then
+    if [ "${SLIME_MODAL_DIRECT:-0}" = "1" ]; then
+        cleanup_training_processes
+        ray stop --force >/dev/null 2>&1 || true
+    elif [ "${FORCE_RAY_RESTART}" = "1" ]; then
+        start_fresh_ray_head "${MASTER_ADDR}" 1
+    fi
 fi
 
 RUNTIME_ENV_JSON="{
+  \"working_dir\": \"${REPO_ROOT}\",
   \"env_vars\": {
-    \"PYTHONPATH\": \"/root/Megatron-LM/\",
+    \"PYTHONPATH\": \"${RUNTIME_PYTHONPATH}\",
+    \"LD_LIBRARY_PATH\": \"${LD_LIBRARY_PATH:-}\",
     \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
-    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\"
+    \"NCCL_NVLS_ENABLE\": \"${HAS_NVLINK}\",
+    \"SLIME_SGLANG_DIRECT\": \"${SLIME_SGLANG_DIRECT:-0}\"
   }
 }"
 
@@ -145,10 +162,8 @@ run_job() {
     local run_root="${RUN_ROOT_BASE}/${run_name}"
     mkdir -p "${run_root}" "${run_root}/debug_rollout"
 
-    local cmd=(
-        ray job submit --address="http://127.0.0.1:8265"
-        --runtime-env-json="${RUNTIME_ENV_JSON}"
-        -- python3 train.py
+    local train_args=(
+        python3 train.py
         --debug-rollout-only
         --actor-num-nodes 1
         --actor-num-gpus-per-node 1
@@ -166,6 +181,22 @@ run_job() {
         "$@"
     )
 
+    local cmd
+    if [ "${SLIME_MODAL_DIRECT:-0}" = "1" ]; then
+        cmd=(
+            env PYTHONPATH="${RUNTIME_PYTHONPATH}" LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
+            CUDA_DEVICE_MAX_CONNECTIONS=1 NCCL_NVLS_ENABLE="${HAS_NVLINK}"
+            SLIME_SGLANG_DIRECT="${SLIME_SGLANG_DIRECT:-0}" SLIME_MODAL_DIRECT="${SLIME_MODAL_DIRECT:-0}"
+            "${train_args[@]}"
+        )
+    else
+        cmd=(
+            ray job submit --address="http://127.0.0.1:8265"
+            --runtime-env-json="${RUNTIME_ENV_JSON}"
+            -- "${train_args[@]}"
+        )
+    fi
+
     echo "=== Starting ${run_name} (window=${over_bs}, ratio=${ratio_label}) ==="
     if [ "${DRY_RUN}" = "1" ]; then
         quote_cmd "${cmd[@]}"
@@ -174,7 +205,7 @@ run_job() {
     fi
 
     set +e
-    "${cmd[@]}" | tee "${run_root}/job_output.log"
+    (cd "${REPO_ROOT}" && "${cmd[@]}") | tee "${run_root}/job_output.log"
     local rc=${PIPESTATUS[0]}
     set -e
 
