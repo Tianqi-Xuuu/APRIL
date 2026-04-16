@@ -20,7 +20,7 @@ from slime.utils.memory_utils import clear_memory
 from slime.utils.wandb_utils import require_wandb
 
 from .checkpoint import load_checkpoint, save_checkpoint
-from .data import get_batch
+from .data import _append_analysis_jsonl, get_batch
 from .loss import get_log_probs_and_entropy, loss_function
 from .models import get_model_provider_and_type
 
@@ -477,9 +477,23 @@ def train(rollout_id, model, optimizer, opt_param_scheduler, data_iterator, num_
                 f"train/{key}": val.mean().item() if isinstance(val, torch.Tensor) else val
                 for key, val in loss_dict.items()
             }
-            log_dict["train/grad_norm"] = grad_norm
+            if isinstance(grad_norm, torch.Tensor):
+                log_dict["train/grad_norm"] = grad_norm.detach().item()
+            else:
+                log_dict["train/grad_norm"] = float(grad_norm)
             for param_group_id, param_group in enumerate(optimizer.param_groups):
                 log_dict[f"train/lr-pg_{param_group_id}"] = opt_param_scheduler.get_lr(param_group)
+
+            train_metrics = {**log_dict, "train/step": accumulated_step_id}
+            _append_analysis_jsonl(
+                args,
+                "train_metrics.jsonl",
+                {
+                    "rollout_id": rollout_id,
+                    "step_in_rollout": step_id,
+                    "metrics": train_metrics,
+                },
+            )
 
             if args.use_wandb:
                 wandb = require_wandb(args)

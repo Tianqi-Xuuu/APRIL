@@ -20,6 +20,11 @@ SAVE_HF_ONLY_FINAL=${SAVE_HF_ONLY_FINAL:-0}
 TRAIN_SEED=${TRAIN_SEED:-1234}
 DISABLE_CKPT_SAVE=${DISABLE_CKPT_SAVE:-0}
 USE_BEHAVIOR_LOGPROBS_FOR_PPO_CLIP=${USE_BEHAVIOR_LOGPROBS_FOR_PPO_CLIP:-0}
+LR=${LR:-1e-6}
+MIN_LR=${MIN_LR:-1e-7}
+CLIP_GRAD=${CLIP_GRAD:-1.0}
+EPS_CLIP=${EPS_CLIP:-0.2}
+EPS_CLIP_HIGH=${EPS_CLIP_HIGH:-0.28}
 
 # Training and rollout defaults.
 ROLL_OUT_BATCH_SIZE=${ROLL_OUT_BATCH_SIZE:-16}
@@ -195,13 +200,13 @@ build_training_args() {
   TRAIN_ARGS=(
     --seed "${TRAIN_SEED}"
     --optimizer adam
-    --lr 1e-6
-    --min-lr 1e-7
+    --lr "${LR}"
+    --min-lr "${MIN_LR}"
     --lr-decay-style cosine
     --weight-decay 0.01
     --adam-beta1 0.9
     --adam-beta2 0.98
-    --clip-grad 1.0
+    --clip-grad "${CLIP_GRAD}"
   )
 
   GRPO_ARGS=(
@@ -209,8 +214,8 @@ build_training_args() {
     --kl-loss-coef 0.00
     --kl-coef 0.00
     --entropy-coef 0.00
-    --eps-clip 0.2
-    --eps-clip-high 0.28
+    --eps-clip "${EPS_CLIP}"
+    --eps-clip-high "${EPS_CLIP_HIGH}"
   )
 
   SGLANG_ARGS=(
