@@ -1,0 +1,12 @@
+{"rollout_id": 0, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.359375, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.015625}}
+{"rollout_id": 0, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.265625, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.0}}
+{"rollout_id": 4, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.140625, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.0}}
+{"rollout_id": 9, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.21875, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.0}}
+{"rollout_id": 14, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.125, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.734375}}
+{"rollout_id": 19, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.015625, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 1.0}}
+{"rollout_id": 24, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.015625, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.984375}}
+{"rollout_id": 29, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.0, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 0.984375}}
+{"rollout_id": 34, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.0, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 1.0}}
+{"rollout_id": 39, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.0, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 1.0}}
+{"rollout_id": 44, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.0, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 1.0}}
+{"rollout_id": 49, "metrics": {"eval/math_level2_test.subset64.seed1234": 0.0, "eval/math_level2_test.subset64.seed1234-truncated_ratio": 1.0}}

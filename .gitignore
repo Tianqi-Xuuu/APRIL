@@ -6,6 +6,12 @@ __pycache__/
 # C extensions
 *.so
 
+results/  
+
+**/debug_rollout/ 
+**/sample_records/ 
+**/eval_sample_records/ 
+
 # Distribution / packaging
 .Python
 build/
