@@ -420,6 +420,68 @@ def remove_boxed(s):
         return None
 
 
+def strip_leading_chat_instruction(text: str) -> str:
+    """Drop user/system turns so \\boxed in the problem statement is not counted."""
+    if not text:
+        return text
+    marker = "<|im_start|>assistant"
+    lower = text.lower()
+    key = marker.lower()
+    idx = lower.rfind(key)
+    if idx < 0:
+        return text
+    return text[idx + len(marker) :].lstrip("\n\r \t")
+
+
+def response_region_for_box_counting(response: str) -> str:
+    """Model-only region for \\boxed counting: no instruction, no think prefix."""
+    text = strip_leading_chat_instruction(response)
+    if "</think>" in text:
+        return text.split("</think>", 1)[1]
+    if "###Response" in text:
+        return text.split("###Response", 1)[1]
+    return text
+
+
+def count_boxed_spans_in_text(text: str) -> int:
+    """Count non-overlapping balanced ``\\boxed{...}`` or ``\\fbox{...}`` spans."""
+    if not text:
+        return 0
+    count = 0
+    pos = 0
+    while pos < len(text):
+        idx_boxed = text.find("\\boxed", pos)
+        idx_fbox = text.find("\\fbox", pos)
+        if idx_boxed < 0 and idx_fbox < 0:
+            break
+        if idx_boxed < 0 or (idx_fbox >= 0 and idx_fbox < idx_boxed):
+            idx_chosen = idx_fbox
+            token = "\\fbox"
+        else:
+            idx_chosen = idx_boxed
+            token = "\\boxed"
+        brace_at = idx_chosen + len(token)
+        if brace_at >= len(text) or text[brace_at] != "{":
+            pos = idx_chosen + 1
+            continue
+        depth = 1
+        i = brace_at + 1
+        while i < len(text):
+            ch = text[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    count += 1
+                    pos = i + 1
+                    break
+            i += 1
+        else:
+            pos = idx_chosen + 1
+    return count
+
+
 def extract_boxed_answer(solution: str) -> str:
     """Extract the answer from inside a LaTeX \\boxed{} command"""
     solution = last_boxed_only_string(solution)
@@ -500,9 +562,12 @@ def extract_answer(passage: str) -> str:
 def grade_answer_verl(solution_str, ground_truth):
     if not ground_truth:
         return False
+    region = response_region_for_box_counting(solution_str)
+    if count_boxed_spans_in_text(region) > 1:
+        return False
     if "\\boxed" in ground_truth:
         ground_truth = extract_answer(ground_truth)
-    given_answer = extract_answer(solution_str)
+    given_answer = extract_answer(region)
     if given_answer is None:
         return False
     return grade_answer_mathd(given_answer, ground_truth) or grade_answer_sympy(given_answer, ground_truth)

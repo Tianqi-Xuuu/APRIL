@@ -1,15 +1,18 @@
-from .math_utils import extract_answer, grade_answer_mathd, grade_answer_sympy
+from .math_utils import (
+    count_boxed_spans_in_text,
+    extract_answer,
+    grade_answer_mathd,
+    grade_answer_sympy,
+    response_region_for_box_counting,
+)
 
 
 def get_deepscaler_rule_based_reward(response, label):
-    if "</think>" in response:
-        model_solution = response.split("</think>")[1]
-    elif "###Response" in response:
-        model_solution = response.split("###Response")[1]
-    else:
-        # Fall back to parsing the whole response when the model does not emit
-        # an explicit think/response delimiter.
-        model_solution = response
+    # Same region for box counting and grading: strip instruction (e.g. ChatML
+    # user block with \\boxed in the problem) then drop think/###Response prefix.
+    model_solution = response_region_for_box_counting(response)
+    if count_boxed_spans_in_text(model_solution) > 1:
+        return 0
 
     model_answer = extract_answer(model_solution)
     if model_answer is None:

@@ -1,0 +1,12 @@
+rollout_id,eval_reward,eval_key,eval_truncated_ratio
+0,0.34375,eval/math_level2_test.subset64.seed1234,0.0
+4,0.4375,eval/math_level2_test.subset64.seed1234,0.046875
+9,0.640625,eval/math_level2_test.subset64.seed1234,0.03125
+14,0.65625,eval/math_level2_test.subset64.seed1234,0.078125
+19,0.65625,eval/math_level2_test.subset64.seed1234,0.046875
+24,0.640625,eval/math_level2_test.subset64.seed1234,0.078125
+29,0.609375,eval/math_level2_test.subset64.seed1234,0.0625
+34,0.640625,eval/math_level2_test.subset64.seed1234,0.09375
+39,0.59375,eval/math_level2_test.subset64.seed1234,0.125
+44,0.671875,eval/math_level2_test.subset64.seed1234,0.1875
+49,0.671875,eval/math_level2_test.subset64.seed1234,0.109375

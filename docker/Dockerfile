@@ -24,6 +24,8 @@ RUN pip install https://github.com/Dao-AILab/flash-attention/releases/download/v
 WORKDIR /root/
 RUN git clone https://github.com/NVIDIA/Megatron-LM.git --recursive && \
     cd Megatron-LM && \
+    git checkout cc0bdfbddebf709c78c0bc002e8579b8853f7ff9 && \
+    git submodule update --init --recursive && \
     pip install -e .
 
 # sandwitch norm for GLM models
@@ -39,6 +41,7 @@ RUN cd Megatron-LM && \
 # sglang patch
 COPY patch/sglang.patch /sgl-workspace/sglang/
 RUN cd /sgl-workspace/sglang && \
+  git checkout 625018d2594422f7d35cdd51fd2e492d92a1fc3a && \
   git apply sglang.patch && \
   if grep -R -n '^<<<<<<< ' .; then \
     echo "Patch failed to apply cleanly. Please resolve conflicts." && \

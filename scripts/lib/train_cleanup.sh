@@ -25,5 +25,10 @@ start_fresh_ray_head() {
 
     cleanup_training_processes
     ray stop --force >/dev/null 2>&1 || true
-    ray start --head --node-ip-address "${master_addr}" --num-gpus "${num_gpus}" --disable-usage-stats
+    if [ "${SLIME_MODAL_DIRECT:-0}" = "1" ]; then
+        ray start --head --node-ip-address "${master_addr}" --num-gpus "${num_gpus}" \
+            --disable-usage-stats --include-dashboard=False
+    else
+        ray start --head --node-ip-address "${master_addr}" --num-gpus "${num_gpus}" --disable-usage-stats
+    fi
 }

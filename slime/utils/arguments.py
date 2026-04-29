@@ -534,6 +534,16 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                 help="Choose KL loss type: kl, k2, k3 low_var_kl",
             )
             parser.add_argument(
+                "--use-behavior-logprobs-for-ppo-clip",
+                action="store_true",
+                default=False,
+                help=(
+                    "If set, PPO ratio old_log_probs will prefer behavior log_probs attached to each sample "
+                    "(e.g., from rollout-time token logprobs). If unavailable, it falls back to rollout-time "
+                    "recomputed log_probs."
+                ),
+            )
+            parser.add_argument(
                 "--advantage-estimator",
                 type=str,
                 choices=["grpo", "gspo", "reinforce_plus_plus", "reinforce_plus_plus_baseline"],
@@ -704,6 +714,21 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                 action="store_true",
                 default=False,
                 help="After each save, delete older iter_* checkpoint weight shards under --save and keep only the latest checkpoint weights.",
+            )
+            parser.add_argument(
+                "--save-hf-weights",
+                action="store_true",
+                default=False,
+                help=(
+                    "Export Hugging Face safetensors under <save>/hf/iter_XXXXXXX at each save point and skip "
+                    "saving Megatron optimizer checkpoints. This does not preserve Megatron resume state."
+                ),
+            )
+            parser.add_argument(
+                "--save-hf-only-final",
+                action="store_true",
+                default=False,
+                help="When --save-hf-weights is set, only export the final HF checkpoint (skip intermediate saves).",
             )
             return parser
 
