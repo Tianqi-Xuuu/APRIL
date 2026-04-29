@@ -277,10 +277,16 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
         "m2po_eligible_tokens": torch.tensor(0.0, device=ppo_kl.device),
         "m2po_masked_tokens": torch.tensor(0.0, device=ppo_kl.device),
         "m2po_masked_ratio": torch.tensor(0.0, device=ppo_kl.device),
+        "m2po_ppo_kl_abs_mean": torch.tensor(0.0, device=ppo_kl.device),
+        "m2po_ppo_kl_abs_max": torch.tensor(0.0, device=ppo_kl.device),
     }
+    token_keep_mask = None
     if args.m2po_enable and pg_loss.numel() > 0:
         with torch.no_grad():
-            eligible_mask = pg_clipfrac > 0
+            # All tokens are eligible by default: mask the top-k% with the
+            # most extreme importance ratios (ppo_kl), regardless of whether
+            # they were clipped or came from carryover samples.
+            eligible_mask = torch.ones_like(pg_clipfrac, dtype=torch.bool)
 
             if args.m2po_only_carryover and sample_metadata is not None:
                 token_counts = [x.numel() for x in batch["log_probs"]]
@@ -306,11 +312,14 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
                 if carryover_mask_list:
                     carryover_mask = torch.cat(carryover_mask_list, dim=0)
                     if carryover_mask.numel() == eligible_mask.numel():
-                        eligible_mask = eligible_mask & carryover_mask
+                        eligible_mask = carryover_mask
 
             eligible_count = int(eligible_mask.sum().item())
             if eligible_count > 0:
                 m2po_log["m2po_eligible_tokens"] = torch.tensor(float(eligible_count), device=ppo_kl.device)
+                eligible_kl_abs = ppo_kl[eligible_mask].abs()
+                m2po_log["m2po_ppo_kl_abs_mean"] = eligible_kl_abs.mean()
+                m2po_log["m2po_ppo_kl_abs_max"] = eligible_kl_abs.max()
 
                 topk_percent = min(max(float(args.m2po_mask_topk_percent), 0.0), 1.0)
                 min_mask_tokens = max(int(args.m2po_min_mask_tokens), 0)
@@ -324,11 +333,9 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
                     topk_pos = torch.topk(eligible_scores, k=target_mask, sorted=False).indices
                     masked_indices = eligible_indices[topk_pos]
 
+                    soft_weight = float(getattr(args, "m2po_mask_soft_weight", 0.0))
                     token_keep_mask = torch.ones_like(ppo_kl, dtype=torch.float32)
-                    token_keep_mask[masked_indices] = 0.0
-
-                    pg_loss = pg_loss * token_keep_mask
-                    pg_clipfrac = pg_clipfrac * token_keep_mask
+                    token_keep_mask[masked_indices] = soft_weight
 
                     masked_count = int(masked_indices.numel())
                     m2po_log["m2po_masked_tokens"] = torch.tensor(float(masked_count), device=ppo_kl.device)
@@ -336,6 +343,11 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
                         float(masked_count) / max(float(eligible_count), 1.0),
                         device=ppo_kl.device,
                     )
+
+    # Apply token_keep_mask OUTSIDE torch.no_grad() so gradient flows through pg_loss.
+    if token_keep_mask is not None:
+        pg_loss = pg_loss * token_keep_mask
+        pg_clipfrac = pg_clipfrac * token_keep_mask
 
     pg_loss = sum_of_sample_mean(pg_loss)
     pg_clipfrac = sum_of_sample_mean(pg_clipfrac)
@@ -415,6 +427,8 @@ def policy_loss_function(args, batch, logits, sum_of_sample_mean):
             "m2po_eligible_tokens": m2po_log["m2po_eligible_tokens"].clone().detach(),
             "m2po_masked_tokens": m2po_log["m2po_masked_tokens"].clone().detach(),
             "m2po_masked_ratio": m2po_log["m2po_masked_ratio"].clone().detach(),
+            "m2po_ppo_kl_abs_mean": m2po_log["m2po_ppo_kl_abs_mean"].clone().detach(),
+            "m2po_ppo_kl_abs_max": m2po_log["m2po_ppo_kl_abs_max"].clone().detach(),
         },
     )
 

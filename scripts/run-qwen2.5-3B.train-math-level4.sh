@@ -20,6 +20,7 @@ ROLLOUT_MAX_RESPONSE_LEN=${ROLLOUT_MAX_RESPONSE_LEN:-4096}
 SGLANG_MEM_FRACTION=${SGLANG_MEM_FRACTION:-0.70}
 NUM_ROLLOUT=${NUM_ROLLOUT:-30}
 EVAL_INTERVAL=${EVAL_INTERVAL:-5}
+SAVE_INTERVAL=${SAVE_INTERVAL:-${EVAL_INTERVAL}}
 PARTIAL_ROLLOUT=${PARTIAL_ROLLOUT:-0}
 OVERSAMPLING_BATCH_SIZE=${OVERSAMPLING_BATCH_SIZE:-$((ROLL_OUT_BATCH_SIZE * 2))}
 INPUT_DATA=${INPUT_DATA:-/root/math_level12/data/math-level4-train.stepthink.parquet}
@@ -71,7 +72,7 @@ ROLLOUT_ARGS=(
   --apply-chat-template
   --rm-type deepscaler
   --num-rollout "${NUM_ROLLOUT}"
-  --save-interval "${EVAL_INTERVAL}"
+  --save-interval "${SAVE_INTERVAL}"
   --rollout-batch-size "${ROLL_OUT_BATCH_SIZE}"
   --n-samples-per-prompt "${N_SAMPLES_PER_PROMPT}"
   --rollout-max-response-len "${ROLLOUT_MAX_RESPONSE_LEN}"
@@ -147,6 +148,8 @@ if [ "${DEBUG_ROLLOUT_ONLY}" = "1" ]; then
   DEBUG_ARGS+=(--debug-rollout-only)
 fi
 
+read -r -a EXTRA_ALGO_ARGS_ARR <<< "${EXTRA_ALGO_ARGS:-}"
+
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 start_fresh_ray_head "${MASTER_ADDR}" 1
 
@@ -157,6 +160,7 @@ fi
 
 RUNTIME_ENV_JSON="{
   \"working_dir\": \"${APRIL_ROOT}\",
+  \"excludes\": [\"results/\", \"runs/\", \"*.pkl\", \"*.parquet\", \"*.bin\", \"*.pt\", \"*.safetensors\"],
   \"env_vars\": {
     \"PYTHONPATH\": \"${RUNTIME_PYTHONPATH}\",
     \"CUDA_DEVICE_MAX_CONNECTIONS\": \"1\",
@@ -181,4 +185,5 @@ ray job submit --address="http://127.0.0.1:8265" \
   "${TRAIN_ARGS[@]}" \
   "${PERF_ARGS[@]}" \
   "${SGLANG_ARGS[@]}" \
-  "${MISC_ARGS[@]}" | tee "${JOB_LOG}"
+  "${MISC_ARGS[@]}" \
+  "${EXTRA_ALGO_ARGS_ARR[@]}" | tee "${JOB_LOG}"

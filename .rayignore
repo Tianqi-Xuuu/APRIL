@@ -1,0 +1,12 @@
+# Exclude results directory - contains symlinks to large run data
+results/
+# Exclude any run directories if accidentally placed here
+runs/
+# Exclude large data files
+*.pkl
+*.parquet
+*.bin
+*.pt
+*.safetensors
+# Exclude slurm logs
+slurm_logs/

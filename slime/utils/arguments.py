@@ -584,6 +584,16 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                 help="Minimum number of outlier tokens to mask when eligible clipped tokens exist.",
             )
             parser.add_argument(
+                "--m2po-mask-soft-weight",
+                type=float,
+                default=0.0,
+                help=(
+                    "Weight assigned to masked tokens instead of hard zero. "
+                    "0.0 = full masking (may kill gradient); >0 = soft masking preserves gradient flow. "
+                    "E.g. 0.1 means masked tokens contribute 10%% of their normal loss."
+                ),
+            )
+            parser.add_argument(
                 "--disable-grpo-std-normalization",
                 action="store_false",
                 dest="grpo_std_normalization",
